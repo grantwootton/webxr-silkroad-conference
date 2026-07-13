@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Local HTTPS / dev certs
+cert.key
+cert.crt
+*.pem
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs and caches
+npm-debug.log*
+yarn-error.log*
+.cache/
+.vercel/
+
+# Temp encode / compress workspaces
+tmp/
+.tmp/
+assets/videos/*.tmp.mp4
+assets/videos/*.original.mp4
+assets/models/_compressed/
+_local_backups/

@@ -1,0 +1,28 @@
+{
+  "name": "webxr-silkroad-conference",
+  "version": "1.0.0",
+  "description": "WebXR Training Conference Room — Silk Road Travel & Personal Safety",
+  "private": true,
+  "scripts": {
+    "dev": "npx --yes serve -l 3000",
+    "start": "npx --yes serve -l 3000",
+    "serve": "npx --yes serve -l 3000",
+    "https": "node scripts/https-server.js",
+    "https:certs": "bash scripts/gen-certs.sh",
+    "compress:models": "node scripts/compress-models.js",
+    "test": "echo \"No automated tests yet. Open http://localhost:3000 and exercise interactions.\""
+  },
+  "author": "",
+  "license": "ISC",
+  "keywords": [
+    "webxr",
+    "aframe",
+    "training",
+    "vr",
+    "silk-road"
+  ],
+  "type": "commonjs",
+  "dependencies": {
+    "@gltf-transform/cli": "^4.4.1"
+  }
+}
