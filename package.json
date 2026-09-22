@@ -1,26 +1,18 @@
 {
   "name": "webxr-silkroad-conference",
   "version": "1.0.0",
-  "description": "WebXR Training Conference Room — Silk Road Travel & Personal Safety",
-  "private": true,
+  "description": "Silk Road Training — Hostile Environment Training WebXR room",
+  "main": "server.js",
   "scripts": {
-    "dev": "npx --yes serve -l 3000",
-    "start": "npx --yes serve -l 3000",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "https": "node server.js",
+    "clean-certs": "rm -f cert.key cert.crt && echo 'Certificates removed. Run npm start to regenerate.'",
     "serve": "npx --yes serve -l 3000",
-    "https": "node scripts/https-server.js",
-    "https:certs": "bash scripts/gen-certs.sh",
-    "compress:models": "node scripts/compress-models.js",
-    "test": "echo \"No automated tests yet. Open http://localhost:3000 and exercise interactions.\""
+    "test": "echo \"Open https://localhost:8080 for Quest testing.\""
   },
   "author": "",
   "license": "ISC",
-  "keywords": [
-    "webxr",
-    "aframe",
-    "training",
-    "vr",
-    "silk-road"
-  ],
   "type": "commonjs",
   "dependencies": {
     "@gltf-transform/cli": "^4.4.1"

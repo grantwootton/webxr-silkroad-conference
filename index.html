@@ -2,1221 +2,246 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Silk Road WebXR training conference room — interactive IFAK, grab bag, 360 video, and travel safety content.">
-    <meta name="theme-color" content="#0a1620">
-    <title>Silk Road — WebXR Training Conference Room</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-
-    <!-- A-Frame 1.8 + movement extras + stable outdoor sky/lighting -->
-    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.0/dist/aframe-extras.min.js"></script>
-    <script src="https://unpkg.com/aframe-environment-component@1.5.0/dist/aframe-environment-component.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="Silk Road Training — Hostile Environment Training WebXR demonstration. Walk a scene, inspect kit, and interact with content on desktop, mobile, Quest VR or AR.">
+    <meta name="theme-color" content="#070806">
+    <title>Hostile Environment Training - WebXR</title>
+    <link rel="icon" href="assets/images/SR_logo.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
-        #status {
-            position: absolute; top: 10px; left: 10px; color: #0f0;
-            background: rgba(0,0,0,0.75); padding: 10px 12px; z-index: 100;
-            font-family: ui-monospace, monospace; font-size: 13px; border-radius: 6px;
-            pointer-events: none;
+        :root {
+            --ink: #e8e4d4;
+            --muted: #9aa08c;
+            --olive: #c6b13a;
+            --olive-dim: #8a7a22;
+            --field: #070806;
+            --panel: #10140d;
+            --line: rgba(198, 177, 58, 0.32);
+            --danger: #c43c3c;
+            --teal: #3dffc7;
         }
-        #instructions {
-            position: absolute; bottom: 20px; left: 20px; color: #fff;
-            background: rgba(0,0,0,0.75); padding: 12px 14px; border-radius: 8px;
-            max-width: 520px; font-size: 14px; line-height: 1.45; z-index: 100;
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; background: var(--field); color: var(--ink); }
+        body {
+            font-family: "Source Serif 4", Georgia, serif;
+            min-height: 100vh;
+            background:
+                radial-gradient(1200px 700px at 80% -10%, rgba(198, 177, 58, 0.08), transparent 55%),
+                radial-gradient(900px 500px at -10% 110%, rgba(61, 255, 199, 0.05), transparent 50%),
+                linear-gradient(180deg, #050605 0%, #0b0d09 100%);
         }
-        body.in-vr #status,
-        body.in-vr #instructions { display: none !important; }
-
-        #screen-overlay {
-            position: absolute; inset: 0;
-            background: rgba(0, 0, 0, 0.95); display: none; z-index: 200;
-            align-items: center; justify-content: center; flex-direction: column;
+        .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+        header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 22px 0 8px; gap: 16px;
         }
-        #screen-frame {
-            width: 88%; height: 82%; background: #111;
-            border: 10px solid #00ff88; border-radius: 16px;
-            box-shadow: 0 0 50px rgba(0, 255, 136, 0.7); overflow: hidden;
+        .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
+        .brand img { height: 58px; width: auto; display: block; }
+        .brand-mark {
+            font-family: "Barlow Condensed", sans-serif;
+            letter-spacing: 0.16em; text-transform: uppercase;
+            font-size: 13px; color: var(--olive);
         }
-        #screen-frame iframe { width: 100%; height: 100%; border: none; }
-        #close-screen {
-            position: absolute; top: 25px; right: 25px;
-            background: #ff2222; color: white; padding: 14px 28px;
-            border: none; border-radius: 8px; font-size: 20px; cursor: pointer; z-index: 210;
+        .eyebrow {
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--olive); margin: 0 0 10px;
         }
-
-        /* Lightweight desktop toast (portals / status messages) — no blocking alert() on Quest */
+        h1 {
+            font-family: "Barlow Condensed", sans-serif;
+            font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+            font-size: clamp(2.4rem, 7vw, 4.6rem); line-height: 0.92; margin: 0 0 16px;
+        }
+        .lede { font-size: 1.15rem; line-height: 1.55; color: var(--muted); max-width: 38rem; margin: 0 0 28px; }
+        .hero { padding: 48px 0 28px; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 40px; align-items: center; }
+        .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+        .btn {
+            font-family: "Barlow Condensed", sans-serif;
+            letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none;
+            border: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+            padding: 16px 26px; font-size: 1.05rem; font-weight: 700;
+        }
+        .btn-primary { background: var(--olive); color: #14150b; }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+        .hero-card {
+            background: linear-gradient(180deg, rgba(16,20,13,0.92), rgba(8,10,7,0.92));
+            border: 1px solid var(--line); border-radius: 18px; padding: 22px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+        }
+        .hero-card img {
+            width: 100%; height: 220px; object-fit: cover;
+            background: #000; border-radius: 10px; display: block;
+        }
+        .hero-card p { margin: 14px 0 0; color: var(--muted); font-size: 0.95rem; }
+        section { padding: 18px 0 8px; }
+        .section-title {
+            font-family: "Barlow Condensed", sans-serif;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            font-size: 1.4rem; margin: 0 0 16px; color: var(--ink);
+        }
+        .modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .module {
+            text-align: left; background: var(--panel); border: 1px solid var(--line);
+            color: var(--ink); border-radius: 14px; padding: 0 0 14px; cursor: pointer;
+            font-family: inherit; overflow: hidden;
+        }
+        .module:hover { border-color: var(--olive); }
+        .module img {
+            width: 100%; height: 132px; object-fit: cover; display: block;
+            background: #000;
+        }
+        .module strong {
+            display: block; font-family: "Barlow Condensed", sans-serif;
+            letter-spacing: 0.08em; text-transform: uppercase; font-size: 1.15rem;
+            margin: 12px 16px 6px;
+        }
+        .module span { color: var(--muted); font-size: 0.92rem; display: block; margin: 0 16px; }
+        .blocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding-bottom: 40px; }
+        .block {
+            background: rgba(16, 20, 13, 0.8); border: 1px solid rgba(255,255,255,0.06);
+            border-top: 2px solid var(--olive); border-radius: 14px; padding: 20px 20px 18px;
+        }
+        .block img.icon {
+            width: 72px; height: 72px; object-fit: cover; border-radius: 12px;
+            display: block; margin: 0 0 12px; background: #000;
+            border: 1px solid var(--line);
+        }
+        .block h2 {
+            font-family: "Barlow Condensed", sans-serif;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            font-size: 1.2rem; margin: 0 0 10px; color: var(--olive);
+        }
+        .block p { margin: 0; color: var(--muted); line-height: 1.5; }
+        footer {
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 22px 0 36px; color: var(--muted); font-size: 0.88rem;
+            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        }
         #toast {
-            position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
-            background: rgba(10, 22, 32, 0.92); color: #aaddff;
-            border: 1px solid #00ffcc; border-radius: 10px;
-            padding: 12px 18px; max-width: min(90vw, 420px); text-align: center;
-            z-index: 150; opacity: 0; pointer-events: none;
-            transition: opacity 0.25s ease, transform 0.25s ease;
-            font-size: 15px;
+            position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(16px);
+            background: rgba(10, 16, 12, 0.96); color: var(--ink);
+            border: 1px solid var(--olive); border-radius: 10px;
+            padding: 12px 18px; max-width: min(92vw, 440px); text-align: center;
+            z-index: 40; opacity: 0; pointer-events: none;
+            transition: opacity 0.22s ease, transform 0.22s ease;
         }
         #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        body.in-vr #toast { display: none !important; }
+        @media (max-width: 860px) {
+            .hero, .modules, .blocks { grid-template-columns: 1fr; }
+            header { flex-direction: column; align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
-    <div id="status">Silk Road Training WebXR — loading…</div>
-    <div id="instructions">
-        <strong>CONTROLS</strong><br>
-        <strong>Desktop:</strong> W-A-S-D or arrow keys to move, mouse to look. Click objects to interact.<br>
-        <strong>VR:</strong> Thumbsticks to walk. Laser + trigger to select. Right controller laser for UI.
+    <div class="wrap">
+        <header>
+            <a class="brand" href="./index.html">
+                <img src="assets/images/SR_logo.jpg" alt="Silk Road Training">
+                <div class="brand-mark">Silk Road Training</div>
+            </a>
+        </header>
+
+        <section class="hero">
+            <div>
+                <p class="eyebrow">WebXR demonstration · one scene</p>
+                <h1>Hostile Environment Training - WebXR</h1>
+                <p class="lede">
+                    A single scene demonstration for desktop, phone and Quest.
+                    Walk around and inspect the scene, then work through the interactive content and 360-degree video.
+                </p>
+                <div class="cta-row">
+                    <a class="btn btn-primary" href="room.html">Enter The Scene</a>
+                    <button class="btn btn-ghost" type="button" id="contact-cta">Discuss full programme</button>
+                </div>
+            </div>
+            <aside class="hero-card">
+                <img src="assets/images/hero-landing.jpg" alt="Ruined building used as the WebXR training ground" decoding="async">
+                <p>Explore the ruined-building room and start interacting.</p>
+            </aside>
+        </section>
+
+        <section>
+            <h2 class="section-title">Six training modules</h2>
+            <div class="modules" id="modules">
+                <button class="module" type="button">
+                    <img src="assets/images/module-building.jpg" alt="" loading="lazy" decoding="async">
+                    <strong>Digital &amp; Building Safety</strong>
+                    <span>An overview of physical security, particularly around fire safety and crime in accommodation. An overview of your digital security, internet access and electronic surveillance countermeasures.</span>
+                </button>
+                <button class="module" type="button">
+                    <img src="assets/images/module-conflict.jpg" alt="" loading="lazy" decoding="async">
+                    <strong>Conflict Zones</strong>
+                    <span>Preparation for risks specifically related to working in conflict environments, or war zones. Includes preparation, avoiding dangers, surviving extreme situations and psychological considerations.</span>
+                </button>
+                <button class="module" type="button">
+                    <img src="assets/images/module-disaster.jpg" alt="" loading="lazy" decoding="async">
+                    <strong>Disaster Zones</strong>
+                    <span>Preparing and operating in a disaster zone. Covering earthquake, wild fires and extreme weather. Explore the essentials of living, working and staying healthy in extreme climatic environments.</span>
+                </button>
+                <button class="module" type="button">
+                    <img src="assets/images/module-firstaid.jpg" alt="" loading="lazy" decoding="async">
+                    <strong>First Aid</strong>
+                    <span>Develop first-aid awareness to help prepare for treating a casualty with interventions that can be life-saving. An overview of essential first aid equipment, how to use it and improvise when it is not available.</span>
+                </button>
+                <button class="module" type="button">
+                    <img src="assets/images/module-disorder.jpg" alt="" loading="lazy" decoding="async">
+                    <strong>Public Disorder</strong>
+                    <span>Prepare you to work around civil unrest. Covers planning considerations to reduce the risk of harm or detention, suitable equipment for the environment, and tactics used by both protestors and law enforcement.</span>
+                </button>
+                <button class="module" type="button">
+                    <img src="assets/images/module-vehicle.jpg" alt="" loading="lazy" decoding="async">
+                    <strong>Vehicle Safety</strong>
+                    <span>Dive into planning considerations for using vehicles, and mitigations for the factors that can, so often, lead to harm. Additionally, provide some life-saving guidance on what steps to take in the event of an accident.</span>
+                </button>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">How the demo works</h2>
+            <div class="blocks">
+                <article class="block">
+                    <img class="icon" src="assets/images/icon-walk-look.jpg" alt="" loading="lazy" decoding="async">
+                    <h2>Walk and look</h2>
+                    <p>WASD or arrows to move. Click the room to look around. On a phone, drag to look and use the on-screen stick.</p>
+                </article>
+                <article class="block">
+                    <img class="icon" src="assets/images/icon-inspect-kit.jpg" alt="" loading="lazy" decoding="async">
+                    <h2>Inspect kit</h2>
+                    <p>Click any item. A viewer opens in front of you with the training notes.</p>
+                </article>
+                <article class="block">
+                    <img class="icon" src="assets/images/icon-vr-ar.jpg" alt="" loading="lazy" decoding="async">
+                    <h2>VR and AR</h2>
+                    <p>Use the browser VR button on a Quest. AR hides the walls so the kit sits in your real room.</p>
+                </article>
+            </div>
+        </section>
+
+        <footer>
+            <div>Silk Road Training · Hostile Environment Training WebXR</div>
+            <div>One-room demonstration · A-Frame 1.8.0</div>
+        </footer>
     </div>
+
     <div id="toast" role="status" aria-live="polite"></div>
-
-    <!-- Desktop Smart Screen overlay -->
-    <div id="screen-overlay">
-        <button id="close-screen" type="button">✕ CLOSE SCREEN</button>
-        <div id="screen-frame">
-            <iframe id="content-iframe" src="" title="Travel and Personal Safety content" allowfullscreen></iframe>
-        </div>
-    </div>
-
-    <a-scene
-        xr="ar: false; vr: true"
-        background="color: #223344"
-        cursor="rayOrigin: mouse; fuse: false"
-        raycaster="objects: .clickable; far: 50"
-        shadow="type: pcf"
-        draco-decoder-path="https://www.gstatic.com/draco/versioned/decoders/1.5.6/"
-        renderer="colorManagement: true; antialias: true; highRefreshRate: true"
-        loading-screen="dotsColor: #00ffcc; backgroundColor: #0a1620">
-
-        <!-- Shared assets: textures/sounds preload; GLBs load via scene refs (browser HTTP cache reused by Model Viewer) -->
-        <a-assets timeout="120000">
-            <img id="asset-sr-logo" src="assets/images/SR_logo.png" crossorigin="anonymous">
-            <img id="asset-carpet" src="assets/images/carpet.png" crossorigin="anonymous">
-            <img id="asset-albert-thumb" src="assets/thumbnails/albert.jpeg" crossorigin="anonymous">
-            <img id="asset-building" src="assets/images/Building_Safety.jpg" crossorigin="anonymous">
-            <img id="asset-conflict" src="assets/images/Conflict_Zones.jpg" crossorigin="anonymous">
-            <img id="asset-disaster" src="assets/images/Disaster_Zones.jpg" crossorigin="anonymous">
-            <img id="asset-firstaid" src="assets/images/First_Aid.jpg" crossorigin="anonymous">
-            <img id="asset-disorder" src="assets/images/Public_Disorder.jpg" crossorigin="anonymous">
-            <img id="asset-vehicle" src="assets/images/Vehicle_Safety.jpg" crossorigin="anonymous">
-            <img id="asset-stock-preview" src="assets/content/assets/stock-image-1.jpg" crossorigin="anonymous">
-            <audio id="asset-room-hum" src="assets/sounds/room_ambient.wav" preload="auto"></audio>
-            <audio id="asset-click" src="assets/sounds/click.wav" preload="auto"></audio>
-            <!-- Albert video is not preloaded — attached on first open to save bandwidth/memory -->
-        </a-assets>
-
-        <!-- ROOM -->
-        <a-entity id="room-group">
-            <a-gltf-model src="assets/models/conference_room1.glb" position="0 -0.1 0" scale="3 3 3"></a-gltf-model>
-
-            <!-- Tables -->
-            <a-gltf-model src="assets/models/conference_table_-_rectangular_6m.glb" position="0 0 13" scale="2 2 2"></a-gltf-model>
-            <a-text value="THE GRAB BAG" position="0 2 11.5" rotation="270 180 0" align="center" width="6" color="#ffff00" font="https://cdn.aframe.io/fonts/Roboto-msdf.json"></a-text>
-
-            <a-gltf-model src="assets/models/conference_table_-_rectangular_6m.glb" position="-14 0 -5" rotation="0 90 0" scale="2 2 2"></a-gltf-model>
-            <a-text value="THE INDIVIDUAL FIRST AID KIT (IFAK)" position="-12.5 2 -5" rotation="270 90 0" align="center" width="7" color="#ffff00" font="https://cdn.aframe.io/fonts/Roboto-msdf.json"></a-text>
-
-            <!-- Back Wall -->
-            <a-image id="sr-logo" src="#asset-sr-logo" position="0 6 17" rotation="0 180 0" width="6" height="4.5"></a-image>
-            <a-text value="WebXR Conference Room" position="0 4 17" rotation="0 180 0" align="center" width="9" color="#00ffcc" font="https://cdn.aframe.io/fonts/Roboto-msdf.json"></a-text>
-
-            <a-plane id="conference-rug"
-                     position="0 0.05 0"
-                     rotation="-90 0 0"
-                     width="25"
-                     height="16"
-                     material="src: #asset-carpet; side: double; color: #ffffff; emissive: #222222; shader: flat; transparent: true; alphaTest: 0.5"
-                     shadow="receive: true"></a-plane>
-
-            <!-- Albert Frame (clickable thumbnail) -->
-            <a-entity id="albert-frame" position="-17.5 6.5 -6" rotation="0 90 0" class="clickable" scale="1.1 1.1 1.1">
-                <a-box width="5.2" height="5.2" depth="0.3" color="#2c1e16"></a-box>
-                <a-plane id="albert-screen" width="4.8" height="4.8" position="0 0 0.16"
-                         material="src: #asset-albert-thumb; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="ALBERT THOMSON - CLICK FOR VIDEO" position="-17.5 2.8 -5.8" rotation="0 90 0" align="center" width="6" color="#1a1a1a"></a-text>
-
-            <!-- Albert Pop-out Video (src set on first open) -->
-            <a-entity id="albert-popout" visible="false" position="-16 6.5 -6" rotation="0 90 0"
-                      animation__pop="property: scale; from: 0.15 0.15 0.15; to: 1 1 1; dur: 280; easing: easeOutBack; startEvents: popIn"
-                      animation__fade="property: scale; from: 1 1 1; to: 0.1 0.1 0.1; dur: 180; easing: easeInBack; startEvents: popOut">
-                <a-box width="8" height="8" depth="0.2" color="#1a1a1a"></a-box>
-                <a-video id="albert-video-el"
-                         width="7.5" height="7.5"
-                         position="0 0 0.16"
-                         loop="false"
-                         autoplay="false">
-                </a-video>
-                <a-entity id="albert-close-btn" position="4 4 0.4" class="clickable">
-                    <a-box width="1.4" height="0.7" depth="0.15" color="#cc2222" class="clickable"></a-box>
-                    <a-text value="CLOSE" position="0 0 0.08" align="center" width="2.5" color="#ffffff" scale="0.7 0.7 0.7"></a-text>
-                </a-entity>
-            </a-entity>
-
-            <!-- Corridor Frames (portals) -->
-            <a-entity id="frame-building" position="-29.5 5.5 29" rotation="0 90 0" scale="0.85 0.85 0.85" class="clickable portal-frame">
-                <a-box width="6" height="4" depth="0.25" color="#2c1e16"></a-box>
-                <a-plane width="5.6" height="3.6" position="0 0 0.15" material="src: #asset-building; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="BUILDING SAFETY" position="-29.5 2.8 29" rotation="0 90 0" align="center" width="3.5" color="#00ffcc"></a-text>
-
-            <a-entity id="frame-conflict" position="-29.5 5.5 18" rotation="0 90 0" scale="0.85 0.85 0.85" class="clickable portal-frame">
-                <a-box width="6" height="4" depth="0.25" color="#2c1e16"></a-box>
-                <a-plane width="5.6" height="3.6" position="0 0 0.15" material="src: #asset-conflict; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="CONFLICT ZONES" position="-29.5 2.8 18" rotation="0 90 0" align="center" width="3.5" color="#00ffcc"></a-text>
-
-            <a-entity id="frame-disaster" position="-29.5 5.5 6.5" rotation="0 90 0" scale="0.85 0.85 0.85" class="clickable portal-frame">
-                <a-box width="6" height="4" depth="0.25" color="#2c1e16"></a-box>
-                <a-plane width="5.6" height="3.6" position="0 0 0.15" material="src: #asset-disaster; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="DISASTER ZONES" position="-29.5 2.8 6.5" rotation="0 90 0" align="center" width="3.5" color="#00ffcc"></a-text>
-
-            <a-entity id="frame-firstaid" position="-18.5 5.5 29" rotation="0 270 0" scale="0.85 0.85 0.85" class="clickable portal-frame">
-                <a-box width="6" height="4" depth="0.25" color="#2c1e16"></a-box>
-                <a-plane width="5.6" height="3.6" position="0 0 0.15" material="src: #asset-firstaid; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="FIRST AID" position="-18.5 2.8 29" rotation="0 270 0" align="center" width="3.5" color="#00ffcc"></a-text>
-
-            <a-entity id="frame-disorder" position="-18.5 5.5 18" rotation="0 270 0" scale="0.85 0.85 0.85" class="clickable portal-frame">
-                <a-box width="6" height="4" depth="0.25" color="#2c1e16"></a-box>
-                <a-plane width="5.6" height="3.6" position="0 0 0.15" material="src: #asset-disorder; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="PUBLIC DISORDER" position="-18.5 2.8 18" rotation="0 270 0" align="center" width="3.5" color="#00ffcc"></a-text>
-
-            <a-entity id="frame-vehicle" position="-24 5.5 1" rotation="0 0 0" scale="0.85 0.85 0.85" class="clickable portal-frame">
-                <a-box width="6" height="4" depth="0.25" color="#2c1e16"></a-box>
-                <a-plane width="5.6" height="3.6" position="0 0 0.15" material="src: #asset-vehicle; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="VEHICLE SAFETY" position="-24 2.8 1" rotation="0 0 0" align="center" width="3.5" color="#00ffcc"></a-text>
-
-            <!-- Smart Screen -->
-            <a-entity id="smart-screen" position="17 6 0" rotation="0 270 0" scale="2.5 2.5 0.1" class="clickable">
-                <a-box width="8" height="5" depth="0.2" color="#222222"></a-box>
-                <a-plane id="screen-surface" width="7.6" height="4.6" position="0 0 0.12" material="src: #asset-stock-preview; shader: flat; side: double" class="clickable"></a-plane>
-            </a-entity>
-            <a-text value="TRAVEL SAFETY — CLICK FOR CONTENT" position="16 1 0" rotation="0 270 0" align="center" width="6" color="#00ff88"></a-text>
-
-            <!-- 360 Video Ball -->
-            <a-sphere id="video-ball" position="0 4 -14" radius="0.9"
-                      material="color: #00ccff; emissive: #00ccff; emissiveIntensity: 0.9; transparent: true; opacity: 0.85"
-                      class="clickable"
-                      animation="property: scale; to: 1.12 1.12 1.12; dur: 700; easing: easeInOutSine; loop: true; dir: alternate"></a-sphere>
-            <a-text value="360 VIDEO DOME - CLICK TO ENTER" position="0 5.8 -14" align="center" width="5" color="#00ff88"></a-text>
-
-            <!-- IFAK / Grab Bag items — click opens Model Viewer (desktop + VR laser) -->
-            <a-entity id="ifak1" class="clickable" position="2 2.1 14" rotation="0 180 0" scale="1.5 1.5 1.5">
-                <a-gltf-model class="clickable" src="assets/models/individual_first_aid_kit_ifakdesert_color.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="grab" class="clickable" position="4 3.1 13" rotation="0 180 0" scale="1.2 1.2 1.2">
-                <a-gltf-model class="clickable" src="assets/models/grab_bag.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="bottle" class="clickable" position="-2 3.1 14" rotation="0 180 90" scale="1 1 1">
-                <a-gltf-model class="clickable" src="assets/models/lifestraw_bottle.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="knife" class="clickable" position="2 2.2 13.3" rotation="0 180 0" scale="0.6 0.6 0.6">
-                <a-gltf-model class="clickable" src="assets/models/swiss_army_knife.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="scarf" class="clickable" position="-4 2.2 14" rotation="270 180 0" scale="1 1 1">
-                <a-gltf-model class="clickable" src="assets/models/scarf.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="snack" class="clickable" position="-2 2.2 13.2" rotation="0 0 0" scale="0.8 0.8 0.8">
-                <a-gltf-model class="clickable" src="assets/models/energy_bar.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="torch" class="clickable" position="-4 2.2 12" rotation="0 180 0" scale="0.8 0.8 0.8">
-                <a-gltf-model class="clickable" src="assets/models/head_torch.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="map" class="clickable" position="-2 2.2 12" rotation="0 180 0" scale="1 1 1">
-                <a-gltf-model class="clickable" src="assets/models/map.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="compass" class="clickable" position="0 2.2 12" rotation="0 180 0" scale="0.5 0.5 0.5">
-                <a-gltf-model class="clickable" src="assets/models/compass.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="mre" class="clickable" position="0 2.2 13" rotation="0 0 0" scale="2 2 2">
-                <a-gltf-model class="clickable" src="assets/models/mre.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="power" class="clickable" position="4 2 11.5" rotation="0 180 0" scale="0.2 0.2 0.2">
-                <a-gltf-model class="clickable" src="assets/models/power_bank.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="document" class="clickable" position="2 2.2 12" rotation="270 180 0" scale="1 1 1">
-                <a-gltf-model class="clickable" src="assets/models/travel_documents.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="whistle" class="clickable" position="5 2.2 12" rotation="0 0 0" scale="0.3 0.3 0.3">
-                <a-gltf-model class="clickable" src="assets/models/whistle.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="ifak2" class="clickable" position="-14 2.1 -2" rotation="0 90 0" scale="1.5 1.5 1.5">
-                <a-gltf-model class="clickable" src="assets/models/individual_first_aid_kit_ifakblack_color.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="bandage" class="clickable" position="-14 2.2 -4" rotation="90 270 180" scale="0.6 0.6 0.6">
-                <a-gltf-model class="clickable" src="assets/models/emergency_bandage.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="scissors" class="clickable" position="-13 2.2 -5" rotation="0 90 0" scale="0.7 0.7 0.7">
-                <a-gltf-model class="clickable" src="assets/models/tactical_scissors.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="glowstick" class="clickable" position="-14 2.1 -9" rotation="90 0 0" scale="0.5 0.5 0.5">
-                <a-gltf-model class="clickable" src="assets/models/glowstick.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="celox" class="clickable" position="-14 2.2 -6" rotation="90 270 0" scale="0.5 0.5 0.5">
-                <a-gltf-model class="clickable" src="assets/models/celox_rapid_haemostat.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="cat" class="clickable" position="-13 2.2 -7" rotation="270 90 180" scale="0.6 0.6 0.6">
-                <a-gltf-model class="clickable" src="assets/models/cat.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="chestseal" class="clickable" position="-13 2.2 -3" rotation="90 0 90" scale="0.4 0.4 0.4">
-                <a-gltf-model class="clickable" src="assets/models/foxseal_vented.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="gauze" class="clickable" position="-13 2.2 -2" rotation="270 90 0" scale="0.3 0.3 0.3">
-                <a-gltf-model class="clickable" src="assets/models/gauze.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="triangle" class="clickable" position="-14 2.2 0" rotation="270 90 0" scale="0.4 0.4 0.4">
-                <a-gltf-model class="clickable" src="assets/models/triangular_bandage.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="sharpie" class="clickable" position="-14 2.2 -1" rotation="270 90 0" scale="0.5 0.5 0.5">
-                <a-gltf-model class="clickable" src="assets/models/sharpie.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="tape" class="clickable" position="-13 2.2 -1" rotation="0 90 0" scale="0.4 0.4 0.4">
-                <a-gltf-model class="clickable" src="assets/models/duct_tape.glb"></a-gltf-model>
-            </a-entity>
-            <a-entity id="gloves" class="clickable" position="-13 2.2 0" rotation="270 90 0" scale="0.3 0.3 0.3">
-                <a-gltf-model class="clickable" src="assets/models/gloves.glb"></a-gltf-model>
-            </a-entity>
-        </a-entity>
-
-        <!-- 360 Video Mode (videosphere src set on enter; cleared on exit for Quest memory) -->
-        <a-entity id="video-mode" visible="false">
-            <a-videosphere id="video360"
-                           src=""
-                           radius="20"
-                           loop="true"
-                           material="shader: flat; side: back; transparent: false">
-            </a-videosphere>
-            <a-plane id="exit-button" position="0 4 -14" rotation="0 0 0" width="8" height="2.5"
-                     material="color: #ff2222; emissive: #ff0000; shader: flat" class="clickable">
-                <a-text value="EXIT 360 VIDEO" position="0 0 0.1" align="center" width="6" color="#ffffff"></a-text>
-            </a-plane>
-        </a-entity>
-
-        <!-- Model Viewer (summoned in front of user) -->
-        <a-entity id="model-viewer" visible="false">
-            <a-box width="6.2" height="5.4" depth="0.35" color="#0d1f2d" opacity="0.3" shadow="cast:true; receive:true"></a-box>
-            <a-box width="6.4" height="5.6" depth="0.15" color="#00ffcc" opacity="0.08" position="0 0 -0.1"></a-box>
-
-            <a-text id="viewer-title" value="MODEL INSPECTOR" position="0 2.35 0.25" align="center" width="5.5" color="#00ffcc" font="https://cdn.aframe.io/fonts/Roboto-msdf.json"></a-text>
-            <a-entity id="viewer-model" position="0 0.15 0.25"></a-entity>
-
-            <a-plane width="5.8" height="1.9" position="0 -1.85 0.22" color="#0a1620" opacity="0.92" shadow>
-                <a-text id="viewer-info"
-                        value="Loading model info...\n\nClick and drag on the model area to rotate.\nScroll wheel to zoom in/out."
-                        position="0 0 0.12" align="center" width="5.3" color="#aaddff" wrap-count="48"
-                        font="https://cdn.aframe.io/fonts/Roboto-msdf.json"></a-text>
-            </a-plane>
-
-            <a-entity id="viewer-close" position="2.7 2.4 1.1" class="clickable">
-                <a-box class="clickable" width="1.2" height="0.6" depth="0.15" color="#cc2222" shadow></a-box>
-                <a-text value="CLOSE" position="0 0 0.1" align="center" width="2" color="#ffffff" scale="0.7 0.7 0.7"></a-text>
-            </a-entity>
-            <a-entity id="viewer-reset" position="1.3 2.4 1.1" class="clickable">
-                <a-box class="clickable" width="1.5" height="0.6" depth="0.15" color="#3366aa" shadow></a-box>
-                <a-text value="RESET" position="0 0 0.1" align="center" width="2.5" color="#ffffff" scale="0.65 0.65 0.65"></a-text>
-            </a-entity>
-            <a-entity id="rotate-left" position="-2.3 0.15 1.15" class="clickable">
-                <a-box class="clickable" width="0.9" height="0.9" depth="0.15" color="#00ffcc" emissive="#00ffcc" emissiveIntensity="0.5" shadow></a-box>
-                <a-text value="<" position="0 0 0.12" align="center" width="2" color="#ffffff" scale="10 10 10"></a-text>
-            </a-entity>
-            <a-entity id="rotate-right" position="2.3 0.15 1.15" class="clickable">
-                <a-box class="clickable" width="0.9" height="0.9" depth="0.15" color="#00ffcc" emissive="#00ffcc" emissiveIntensity="0.5" shadow></a-box>
-                <a-text value=">" position="0 0 0.12" align="center" width="2" color="#ffffff" scale="10 10 10"></a-text>
-            </a-entity>
-
-            <a-text value="CLICK ARROWS TO ROTATE & SCROLL TO ZOOM" position="0 -2.75 0.25" align="center" width="6" color="#66ffaa" scale="0.6 0.6 0.6"></a-text>
-
-            <!-- Drag plane is intentionally not .clickable so laser/mouse ray uses pointer events only -->
-            <a-plane id="viewer-drag-plane" width="5.5" height="4.2" position="0 0.15 0.55"
-                     material="color:#ffffff; opacity:0.0; transparent:true; side:double"></a-plane>
-        </a-entity>
-
-        <!-- Player Rig -->
-        <a-entity id="rig"
-                  movement-controls="fly: false; speed: 0.12"
-                  position="0 4 5">
-            <a-camera id="main-camera" look-controls="pointerLockEnabled: true"></a-camera>
-            <a-entity id="left-hand" meta-touch-controls="hand: left"></a-entity>
-            <a-entity id="right-hand"
-                      meta-touch-controls="hand: right"
-                      laser-controls="hand: right; lineColor: #00ffcc; lineOpacity: 0.8"
-                      raycaster="objects: .clickable; far: 50; lineColor: #00ffcc; lineOpacity: 0.55">
-            </a-entity>
-        </a-entity>
-
-        <!-- Lights (spot reduced for Quest fill-rate; further cut on enter-vr) -->
-        <a-light id="light-ambient" type="ambient" intensity="0.65"></a-light>
-        <a-light id="light-dir" type="directional" position="10 25 15" intensity="1.1" cast-shadow="true"></a-light>
-        <a-light id="table-spot" type="spot" position="0 12 10" rotation="-45 0 0" intensity="1.8" angle="35" penumbra="0.4" color="#ffeecc" cast-shadow="false"></a-light>
-
-        <a-sound id="room-hum" src="#asset-room-hum" position="0 5 0" loop="true" volume="0.4" autoplay="false"></a-sound>
-        <a-sound id="click-sound" src="#asset-click" volume="0.7"></a-sound>
-
-        <a-entity vr-mode-ui="enabled: true"></a-entity>
-    </a-scene>
-
     <script>
-    (function () {
-        'use strict';
-
-        const DEBUG = false;
-        const PATHS = {
-            albertVideo: 'assets/videos/albert.mp4',
-            video360: 'assets/videos/360_Demo_360.mp4',
-            // Trailing slash works on Vercel and `serve` (avoids .html extension rewrites)
-            content: 'assets/content/',
-            contentPreview: 'assets/content/assets/stock-image-1.jpg'
-        };
-        const DEG2RAD = Math.PI / 180;
-
-        function log() {
-            if (DEBUG && console && console.log) console.log.apply(console, arguments);
-        }
-
-        function isEntityVisible(el) {
-            if (!el) return false;
-            const v = el.getAttribute('visible');
-            return v === true || v === 'true';
-        }
-
-        function getTHREE() {
-            return window.THREE || (window.AFRAME && window.AFRAME.THREE) || null;
-        }
-
-        /** HTMLVideoElement under an a-video / a-videosphere material, if ready */
-        function getMediaElement(aVideoEl) {
-            try {
-                const mat = aVideoEl && aVideoEl.components && aVideoEl.components.material;
-                const img = mat && mat.material && mat.material.map && mat.material.map.image;
-                if (img && typeof img.play === 'function') return img;
-            } catch (_) { /* ignore */ }
-            return null;
-        }
-
-        function playClick(clickSound) {
-            try {
-                if (clickSound && clickSound.components && clickSound.components.sound) {
-                    clickSound.components.sound.playSound();
-                }
-            } catch (_) { /* ignore */ }
-        }
-
-        function showToast(message, ms) {
+        (function () {
             const toast = document.getElementById('toast');
-            if (!toast) return;
-            toast.textContent = message;
-            toast.classList.add('show');
-            clearTimeout(showToast._t);
-            showToast._t = setTimeout(() => toast.classList.remove('show'), ms || 3200);
-        }
-
-        function parseRotationRadians(rotationStr) {
-            let rotX = 0;
-            let rotY = 0;
-            if (rotationStr) {
-                const parts = String(rotationStr).split(/\s+/).map(parseFloat);
-                rotX = (parts[0] || 0) * DEG2RAD;
-                rotY = (parts[1] || 0) * DEG2RAD;
+            function showToast(msg) {
+                if (!toast) return;
+                toast.textContent = msg;
+                toast.classList.add('show');
+                clearTimeout(showToast._tid);
+                showToast._tid = setTimeout(function () { toast.classList.remove('show'); }, 3600);
             }
-            return { rotX, rotY };
-        }
-
-        // Per-item Model Viewer data (scene table scales stay tiny; viewerScale is for inspection)
-        const modelData = {
-            ifak1: {
-                src: 'assets/models/individual_first_aid_kit_ifakdesert_color.glb',
-                viewerScale: '1.7 1.7 1.7',
-                viewerPosition: '0 0 0',
-                viewerRotation: '0 0 0',
-                title: 'IFAK Bag',
-                info: 'Individual First Aid Kit (IFAK)\n\n Should be a compact and low-profile design. Zip fastening spread for easy access to equipment. MOLLE-compatible pouch for body armour or belt attachment. Colours vary depending on assignment context.'
-            },
-            ifak2: {
-                src: 'assets/models/individual_first_aid_kit_ifakblack_color.glb',
-                viewerScale: '1.7 1.7 1.7',
-                viewerPosition: '0 0 0',
-                viewerRotation: '0 0 0',
-                title: 'IFAK Bag',
-                info: 'Individual First Aid Kit (IFAK) minimal content should include:\n\n• Combat Application Tourniquet (CAT), Celox Rapid Hemostatic Gauze, Compressed Gauze, Pressure Bandage, Trauma Shears, Chest Seal, Triangular Bandage, Gloves, Permanent Marker, Cyalume & Duct Tape.'
-            },
-            bandage: {
-                src: 'assets/models/emergency_bandage.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'The Emergency Bandage',
-                info: 'The Emergency Bandage is a multi-purpose haemorrhage control dressing. It is within an outer package, which should be removed, and a sterile, vacuum-sealed clear packaging. Contains a large pad and an elasticated self-adhering wrap. It has a built-in pressure applicator bar.'
-            },
-            scissors: {
-                src: 'assets/models/tactical_scissors.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '270 0 0',
-                title: 'Trauma Shears',
-                info: 'Heavy-Duty scissors with a serrated blade that cuts clothing, boots and straps.Non-slip ergonomic grips that can even cut through light Kevlar or leather. The blunt tip is for safety when gaining rapid access to wounds.'
-            },
-            glowstick: {
-                src: 'assets/models/glowstick.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'ChemLight / Glowstick / Cyalume',
-                info: 'The stick is a crush-to-activate light. No batteries needed; it can provide 8 to 12 hours of light. It is waterproof, submersible, and non-flammable. Can be used as a component of an improvised tourniquet. Multiple colours for marking or signalling.'
-            },
-            celox: {
-                src: 'assets/models/celox_rapid_haemostat.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Celox Rapid Haemostatic Gauze',
-                info: 'The haemostatic gauze, featuring Celox citosan granules, is laminated onto a dense Z-Fold gauze, allowing for swift and effective packing into bleeding wounds. It is designed to stop moderate to severe bleeding within just 60 second.'
-            },
-            cat: {
-                src: 'assets/models/cat.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '90 0 0',
-                title: 'The Combat Application Tourniquet',
-                info: 'The CAT is a small, lightweight, medical device designed to completely stop life-threatening arterial bleeding from a limb. It is widely considered a gold standard in pre-hospital emergency care. Avoid unbranded, cheap replicas found on generic e-commerce platforms.'
-            },
-            chestseal: {
-                src: 'assets/models/foxseal_vented.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 180 0',
-                title: 'The Foxseal - Vented',
-                info: 'This chest seal is dressing designed to treat open pneumothorax (sucking chest wounds). It features a venting system to allow trapped air and blood to escape the chest cavity while preventing air from re-entering, significantly mitigating the risk of a fatal tension pneumothorax.'
-            },
-            gauze: {
-                src: 'assets/models/gauze.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Compressed Gauze',
-                info: 'This compressed gauze is tightly packed sterile gauze used to quickly fill and pack a wound to help control bleeding with direct pressure.'
-            },
-            triangle: {
-                src: 'assets/models/triangular_bandage.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Triangular Bandage',
-                info: 'This cloth triangular bandage is a large triangular piece of fabric that has a multi-functional use. It can be used as a sling, wrap, support bandage or securing dressings for larger wounds. It can be used as an improvised tourniquet inconjuction with the glowstick.'
-            },
-            sharpie: {
-                src: 'assets/models/sharpie.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Permanent Marker',
-                info: 'This Sharpie Pen can be used to mark a bandage, label equipment, or note the time you applied a tourniquet. After administering first aid, when communicating it is useful to refer to notes your location, what has happened, how many casualties and injury details.'
-            },
-            tape: {
-                src: 'assets/models/duct_tape.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '90 0 0',
-                title: 'Duct Tape',
-                info: 'This tape is flat packed for convenient storage. It is used for its rapid, strong sticking power. It can hold dressings/gauze in place, improvised splinting, and sealing occlusive dressings on a chest.'
-            },
-            gloves: {
-                src: 'assets/models/gloves.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Nitrile Gloves',
-                info: 'Protective gloves are worn to prevent contact with blood and body fluids. They help protect both the first aider and the injured person from infection. Gloves should be worn before treating wounds or bleeding and removed safely after use.'
-            },
-            grab: {
-                src: 'assets/models/grab_bag.glb',
-                viewerScale: '1.2 1.2 1.2',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'The Grab-Bag',
-                info: 'It is not an exact list of equipment, the contents should be relevant to the situation and the environment you are travelling to. It is always with you should something go wrong, and you need to escape fast and survive for 24 hours. This satchel-type bag is robust and does not rip or tear.'
-            },
-            bottle: {
-                src: 'assets/models/lifestraw_bottle.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '180 0 0',
-                title: 'LifeStraw Go',
-                info: 'Any water bottle is good, but this LifeStraw Go bottle is convenient because it can be used with tap or river water; it filters and purifies the water, so you can drink it immediately.'
-            },
-            knife: {
-                src: 'assets/models/swiss_army_knife.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '90 0 0',
-                title: 'Multi-Tool',
-                info: 'A multi-tool, such as a standard Swiss Army knife, has all the functionality, like screwdrivers, that can be used with duct tape for repairs.'
-            },
-            scarf: {
-                src: 'assets/models/scarf.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Head Scarf',
-                info: 'Headscarves are particularly useful during dust storms, in the aftermath of disasters, in high winds, or for lowering your profile. It can also be used as an improvised tourniquet or bandage.'
-            },
-            snack: {
-                src: 'assets/models/energy_bar.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '270 180 0',
-                title: 'Energy Bar',
-                info: 'An energy bar snack to keep you going during the day and provide salt, sugar and calories.'
-            },
-            torch: {
-                src: 'assets/models/head_torch.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Head Torch',
-                info: 'A head torch is essential at night, in a building where the lights have failed, in a ditch in the rain to do some first aid, or to get out of a buildings fast.'
-            },
-            map: {
-                src: 'assets/models/map.glb',
-                viewerScale: '1.5 1.5 1.5',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '90 0 0',
-                title: 'A Map',
-                info: 'A physical map for geographical awareness if electronic devices are damaged or electronic mapping is unavailable.'
-            },
-            compass: {
-                src: 'assets/models/compass.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '90 0 0',
-                title: 'A Compass',
-                info: 'A compass for geographical awareness if electronic devices are damaged or global positioning is unavailable. If you are geographically aware it provides directional assistance.'
-            },
-            mre: {
-                src: 'assets/models/mre.glb',
-                viewerScale: '2 2 2',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '270 180 0',
-                title: 'Meal Ready to Eat',
-                info: 'Emergency rations are helpful. For 24 hours have a Meal Ready to Eat (MRE). You can eat these hot or cold. It can be placed in this hot pack, water can be added, and it can be heated up chemically to give a hot meal.'
-            },
-            power: {
-                src: 'assets/models/power_bank.glb',
-                viewerScale: '0.5 0.5 0.5',
-                viewerPosition: '0 0 0',
-                viewerRotation: '0 0 0',
-                title: 'Power Bank',
-                info: 'Power sources for phones and other electrical equipment are essential. You may choose a emergency power source that has a wind-up or solar charge function as well.'
-            },
-            document: {
-                src: 'assets/models/travel_documents.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '0 0 0',
-                title: 'Travel Documents',
-                info: 'Cash, such as dollars, euros, or local currency, that can pay for a car/taxi or be used otherwise to get you out of trouble. Copies of essential documents, such as a passport, can be laminated for waterproofing. A spare mobile phone as a contingency means of communication.'
-            },
-            whistle: {
-                src: 'assets/models/whistle.glb',
-                viewerScale: '1 1 1',
-                viewerPosition: '0 0.5 0',
-                viewerRotation: '90 0 0',
-                title: 'Whistle',
-                info: 'Useful as an emergency means of communication. Can attract attention of rescuers in disaster zones.'
-            }
-        };
-
-        window.addEventListener('load', () => {
-            try {
-                const sceneEl = document.querySelector('a-scene');
-                const clickSound = document.getElementById('click-sound');
-                const roomHumSound = document.getElementById('room-hum');
-                const statusEl = document.getElementById('status');
-
-                // ---------- Audio (browser autoplay policy) ----------
-                function resumeAudioContext() {
-                    if (!sceneEl || !sceneEl.audioListener || !sceneEl.audioListener.context) return;
-                    const ctx = sceneEl.audioListener.context;
-                    if (ctx.state !== 'suspended') {
-                        if (roomHumSound && roomHumSound.components && roomHumSound.components.sound) {
-                            try { roomHumSound.components.sound.playSound(); } catch (_) { /* ignore */ }
-                        }
-                        return;
-                    }
-                    ctx.resume().then(() => {
-                        log('[Audio] AudioContext resumed');
-                        if (roomHumSound && roomHumSound.components && roomHumSound.components.sound) {
-                            roomHumSound.components.sound.playSound();
-                        }
-                    }).catch((err) => {
-                        if (DEBUG) console.warn('[Audio] resume failed', err);
-                    });
-                }
-
-                ['click', 'touchstart', 'keydown'].forEach((eventName) => {
-                    document.addEventListener(eventName, resumeAudioContext, { once: true, passive: true });
-                });
-                sceneEl.addEventListener('enter-vr', () => setTimeout(resumeAudioContext, 100));
-
-                // ---------- VR chrome + performance ----------
-                const lightDir = document.getElementById('light-dir');
-                const tableSpot = document.getElementById('table-spot');
-
-                sceneEl.addEventListener('enter-vr', () => {
-                    document.body.classList.add('in-vr');
-                    if (lightDir) lightDir.setAttribute('light', 'castShadow', false);
-                    if (tableSpot) tableSpot.setAttribute('light', 'intensity', 1.2);
-                    try {
-                        sceneEl.setAttribute('shadow', 'type', 'basic');
-                    } catch (_) { /* ignore */ }
-                });
-
-                sceneEl.addEventListener('exit-vr', () => {
-                    document.body.classList.remove('in-vr');
-                    if (lightDir) lightDir.setAttribute('light', 'castShadow', true);
-                    if (tableSpot) tableSpot.setAttribute('light', 'intensity', 1.8);
-                    try {
-                        sceneEl.setAttribute('shadow', 'type', 'pcf');
-                    } catch (_) { /* ignore */ }
-                });
-
-                // ---------- Albert video ----------
-                const albertFrame = document.getElementById('albert-frame');
-                const popout = document.getElementById('albert-popout');
-                const videoEl = document.getElementById('albert-video-el');
-                const albertCloseBtn = document.getElementById('albert-close-btn');
-                let albertSrcAttached = false;
-
-                function ensureAlbertSrc() {
-                    if (!videoEl || albertSrcAttached) return;
-                    videoEl.setAttribute('src', PATHS.albertVideo);
-                    albertSrcAttached = true;
-                }
-
-                function pauseAlbert() {
-                    if (!videoEl) return;
-                    const vid = getMediaElement(videoEl);
-                    if (vid) {
-                        try {
-                            vid.pause();
-                            vid.currentTime = 0;
-                        } catch (_) { /* ignore */ }
-                    } else if (typeof videoEl.pause === 'function') {
-                        try { videoEl.pause(); } catch (_) { /* ignore */ }
-                    }
-                }
-
-                function playAlbert() {
-                    if (!videoEl) return;
-                    const vid = getMediaElement(videoEl);
-                    if (vid) {
-                        vid.loop = true;
-                        vid.currentTime = 0;
-                        vid.play().catch(() => {});
-                    } else if (typeof videoEl.play === 'function') {
-                        videoEl.play().catch(() => {});
-                    }
-                }
-
-                function closeAlbertPopout() {
-                    pauseAlbert();
-                    if (!popout) return;
-                    popout.emit('popOut');
-                    setTimeout(() => {
-                        popout.setAttribute('visible', false);
-                        popout.setAttribute('scale', '1 1 1');
-                    }, 200);
-                }
-
-                function toggleAlbertVideo() {
-                    if (!popout || !videoEl) return;
-                    playClick(clickSound);
-                    if (!isEntityVisible(popout)) {
-                        ensureAlbertSrc();
-                        popout.setAttribute('scale', '0.15 0.15 0.15');
-                        popout.setAttribute('visible', true);
-                        popout.emit('popIn');
-                        setTimeout(playAlbert, 280);
-                    } else {
-                        closeAlbertPopout();
-                    }
-                }
-
-                if (albertFrame) albertFrame.addEventListener('click', toggleAlbertVideo);
-                if (videoEl) {
-                    videoEl.addEventListener('click', (e) => {
-                        e.stopImmediatePropagation();
-                        toggleAlbertVideo();
-                    });
-                }
-                if (albertCloseBtn) {
-                    albertCloseBtn.addEventListener('click', (e) => {
-                        e.stopImmediatePropagation();
-                        playClick(clickSound);
-                        closeAlbertPopout();
-                    });
-                }
-
-                // ---------- Model Viewer ----------
-                let isDraggingViewer = false;
-                let prevMouseX = 0;
-                let prevMouseY = 0;
-                let rotY = 0;
-                let rotX = 0;
-                let initialRotX = 0;
-                let initialRotY = 0;
-                let initialScale = '1 1 1';
-
-                const viewer = document.getElementById('model-viewer');
-                const viewerModelContainer = document.getElementById('viewer-model');
-                const viewerTitle = document.getElementById('viewer-title');
-                const viewerInfo = document.getElementById('viewer-info');
-                const dragPlane = document.getElementById('viewer-drag-plane');
-                const closeViewerBtn = document.getElementById('viewer-close');
-                const resetBtn = document.getElementById('viewer-reset');
-
-                function clearViewerModel() {
-                    if (!viewerModelContainer) return;
-                    while (viewerModelContainer.firstChild) {
-                        const child = viewerModelContainer.firstChild;
-                        if (child.object3D) {
-                            child.object3D.traverse((obj) => {
-                                if (obj.geometry) obj.geometry.dispose();
-                                if (obj.material) {
-                                    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-                                    mats.forEach((m) => {
-                                        if (m.map) m.map.dispose();
-                                        m.dispose();
-                                    });
-                                }
-                            });
-                        }
-                        viewerModelContainer.removeChild(child);
-                    }
-                }
-
-                function positionViewerInFrontOfCamera(viewerEl) {
-                    const cameraEl = document.getElementById('main-camera');
-                    const THREE = getTHREE();
-                    if (!cameraEl || !cameraEl.object3D || !THREE) {
-                        viewerEl.setAttribute('position', '0 5.2 -3.5');
-                        return;
-                    }
-                    const camPos = new THREE.Vector3();
-                    cameraEl.object3D.getWorldPosition(camPos);
-                    const camQuat = new THREE.Quaternion();
-                    cameraEl.object3D.getWorldQuaternion(camQuat);
-                    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camQuat);
-                    const newPos = camPos.clone().add(forward.multiplyScalar(3.4));
-                    newPos.y = Math.max(3.8, Math.min(6.8, newPos.y + 0.6));
-                    viewerEl.setAttribute('position', newPos.x.toFixed(2) + ' ' + newPos.y.toFixed(2) + ' ' + newPos.z.toFixed(2));
-                    setTimeout(() => {
-                        if (viewerEl.object3D && cameraEl.object3D) {
-                            const lookTarget = new THREE.Vector3();
-                            cameraEl.object3D.getWorldPosition(lookTarget);
-                            viewerEl.object3D.lookAt(lookTarget);
-                        }
-                    }, 40);
-                }
-
-                function openModelViewer(data) {
-                    if (!viewer || !viewerModelContainer || !data) return;
-                    clearViewerModel();
-
-                    const modelEl = document.createElement('a-gltf-model');
-                    modelEl.setAttribute('src', data.src);
-                    modelEl.setAttribute('scale', data.viewerScale || '1 1 1');
-                    modelEl.setAttribute('shadow', 'cast: true; receive: true');
-                    modelEl.setAttribute('position', data.viewerPosition || '0 0.55 0');
-                    if (data.viewerRotation) modelEl.setAttribute('rotation', data.viewerRotation);
-                    viewerModelContainer.appendChild(modelEl);
-
-                    const parsed = parseRotationRadians(data.viewerRotation);
-                    initialRotX = parsed.rotX;
-                    initialRotY = parsed.rotY;
-                    rotX = initialRotX;
-                    rotY = initialRotY;
-                    initialScale = data.viewerScale || '1 1 1';
-
-                    setTimeout(() => {
-                        if (modelEl.object3D) modelEl.object3D.rotation.set(rotX, rotY, 0);
-                    }, 60);
-
-                    if (viewerTitle) viewerTitle.setAttribute('value', data.title);
-                    if (viewerInfo) viewerInfo.setAttribute('value', data.info);
-                    positionViewerInFrontOfCamera(viewer);
-                    viewer.setAttribute('visible', true);
-                    playClick(clickSound);
-                }
-
-                function closeModelViewer() {
-                    if (!viewer) return;
-                    clearViewerModel();
-                    viewer.setAttribute('visible', false);
-                }
-
-                function applyModelRotation() {
-                    const modelEl = viewerModelContainer && viewerModelContainer.querySelector('a-gltf-model');
-                    if (modelEl && modelEl.object3D) {
-                        modelEl.object3D.rotation.y = rotY;
-                        modelEl.object3D.rotation.x = rotX;
-                    }
-                }
-
-                if (closeViewerBtn) {
-                    closeViewerBtn.addEventListener('click', (e) => {
-                        e.stopImmediatePropagation();
-                        playClick(clickSound);
-                        closeModelViewer();
-                    });
-                }
-
-                if (resetBtn) {
-                    resetBtn.addEventListener('click', (e) => {
-                        e.stopImmediatePropagation();
-                        playClick(clickSound);
-                        rotY = initialRotY;
-                        rotX = initialRotX;
-                        const modelEl = viewerModelContainer && viewerModelContainer.querySelector('a-gltf-model');
-                        if (modelEl) {
-                            if (modelEl.object3D) modelEl.object3D.rotation.set(rotX, rotY, 0);
-                            modelEl.setAttribute('scale', initialScale);
-                        }
-                    });
-                }
-
-                function rotateModel(amountY) {
-                    rotY += amountY;
-                    applyModelRotation();
-                    playClick(clickSound);
-                }
-
-                const rotateLeft = document.getElementById('rotate-left');
-                const rotateRight = document.getElementById('rotate-right');
-                if (rotateLeft) {
-                    rotateLeft.addEventListener('click', (e) => {
-                        e.stopImmediatePropagation();
-                        rotateModel(-0.4);
-                    });
-                }
-                if (rotateRight) {
-                    rotateRight.addEventListener('click', (e) => {
-                        e.stopImmediatePropagation();
-                        rotateModel(0.4);
-                    });
-                }
-
-                if (dragPlane) {
-                    dragPlane.addEventListener('pointerdown', (e) => {
-                        if (!isEntityVisible(viewer)) return;
-                        isDraggingViewer = true;
-                        prevMouseX = e.clientX;
-                        prevMouseY = e.clientY;
-                        try { dragPlane.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-                    });
-                }
-
-                document.addEventListener('pointermove', (e) => {
-                    if (!isDraggingViewer || !viewerModelContainer) return;
-                    rotY += (e.clientX - prevMouseX) * 0.005;
-                    rotX += (e.clientY - prevMouseY) * 0.005;
-                    rotX = Math.max(-1.4, Math.min(1.4, rotX));
-                    applyModelRotation();
-                    prevMouseX = e.clientX;
-                    prevMouseY = e.clientY;
-                });
-
-                document.addEventListener('pointerup', (e) => {
-                    if (isDraggingViewer && dragPlane) {
-                        try { dragPlane.releasePointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-                    }
-                    isDraggingViewer = false;
-                });
-
-                document.addEventListener('wheel', (e) => {
-                    if (!isEntityVisible(viewer) || !viewerModelContainer) return;
-                    const modelEl = viewerModelContainer.querySelector('a-gltf-model');
-                    if (!modelEl) return;
-                    let currentScale = modelEl.getAttribute('scale');
-                    if (typeof currentScale === 'string') {
-                        const parts = currentScale.split(/\s+/).map(parseFloat);
-                        currentScale = { x: parts[0] || 1, y: parts[1] || 1, z: parts[2] || 1 };
-                    } else if (!currentScale) {
-                        currentScale = { x: 1, y: 1, z: 1 };
-                    }
-                    const factor = e.deltaY > 0 ? 0.88 : 1.14;
-                    const newX = Math.max(0.2, Math.min(12, currentScale.x * factor));
-                    const newY = Math.max(0.2, Math.min(12, currentScale.y * factor));
-                    const newZ = Math.max(0.2, Math.min(12, currentScale.z * factor));
-                    modelEl.setAttribute('scale', newX + ' ' + newY + ' ' + newZ);
-                    e.preventDefault();
-                }, { passive: false });
-
-                Object.keys(modelData).forEach((itemId) => {
-                    const itemEl = document.getElementById(itemId);
-                    if (!itemEl) return;
-                    itemEl.addEventListener('click', (e) => {
-                        e.stopImmediatePropagation();
-                        log('[ModelViewer] open', itemId);
-                        openModelViewer(modelData[itemId]);
-                    });
-                });
-
-                // ---------- Portals ----------
-                document.querySelectorAll('.portal-frame').forEach((frame) => {
-                    const plane = frame.querySelector('a-plane');
-                    const label = frame.nextElementSibling;
-
-                    frame.addEventListener('mouseenter', () => {
-                        if (plane) plane.setAttribute('material', { emissive: '#00ffff', emissiveIntensity: 0.35 });
-                    });
-                    frame.addEventListener('mouseleave', () => {
-                        if (plane) plane.setAttribute('material', { emissive: '#000000', emissiveIntensity: 0 });
-                    });
-                    frame.addEventListener('click', () => {
-                        playClick(clickSound);
-                        const title = label ? label.getAttribute('value') : 'Portal';
-                        const msg = title + ' — coming soon. Full module portals will open from here.';
-                        showToast(msg);
-                        // In VR, also surface a brief in-world note via status if needed
-                        if (sceneEl.is && sceneEl.is('vr-mode') && statusEl) {
-                            statusEl.textContent = msg;
-                        }
-                    });
-                });
-
-                // ---------- Smart Screen ----------
-                const screenOverlay = document.getElementById('screen-overlay');
-                const contentIframe = document.getElementById('content-iframe');
-                const closeScreen = document.getElementById('close-screen');
-                const smartScreen = document.getElementById('smart-screen');
-
-                function closeDesktopScreen() {
-                    if (screenOverlay) screenOverlay.style.display = 'none';
-                    if (contentIframe) contentIframe.src = '';
-                }
-
-                function createVRContentPanel() {
-                    const existing = document.getElementById('vr-content-panel');
-                    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
-
-                    const panel = document.createElement('a-entity');
-                    panel.id = 'vr-content-panel';
-                    panel.setAttribute('position', '14.8 5.5 0');
-                    panel.setAttribute('rotation', '0 270 0');
-
-                    const bg = document.createElement('a-plane');
-                    bg.setAttribute('width', '6.5');
-                    bg.setAttribute('height', '4.8');
-                    bg.setAttribute('color', '#111122');
-                    bg.setAttribute('opacity', '0.92');
-                    bg.setAttribute('side', 'double');
-
-                    const title = document.createElement('a-text');
-                    title.setAttribute('value', 'Travel and Personal Safety');
-                    title.setAttribute('position', '0 1.9 0.1');
-                    title.setAttribute('align', 'center');
-                    title.setAttribute('width', '5.5');
-                    title.setAttribute('color', '#00ffcc');
-
-                    // Relative path — works on Vercel root and local static hosts
-                    const preview = document.createElement('a-image');
-                    preview.setAttribute('src', PATHS.contentPreview);
-                    preview.setAttribute('width', '5.2');
-                    preview.setAttribute('height', '2.3');
-                    preview.setAttribute('position', '0 0.2 0.1');
-
-                    const info = document.createElement('a-text');
-                    info.setAttribute('value', 'Click below to open the full content in your browser.');
-                    info.setAttribute('position', '0 -1.4 0.1');
-                    info.setAttribute('align', 'center');
-                    info.setAttribute('width', '5');
-                    info.setAttribute('color', '#dddddd');
-
-                    const openBtn = document.createElement('a-entity');
-                    openBtn.setAttribute('position', '0 -2.1 0.2');
-                    openBtn.setAttribute('class', 'clickable');
-                    const openBox = document.createElement('a-box');
-                    openBox.setAttribute('width', '4');
-                    openBox.setAttribute('height', '0.65');
-                    openBox.setAttribute('depth', '0.1');
-                    openBox.setAttribute('color', '#00aa66');
-                    openBox.setAttribute('class', 'clickable');
-                    const openText = document.createElement('a-text');
-                    openText.setAttribute('value', 'OPEN IN BROWSER');
-                    openText.setAttribute('position', '0 0 0.06');
-                    openText.setAttribute('align', 'center');
-                    openText.setAttribute('width', '3.8');
-                    openText.setAttribute('color', '#ffffff');
-                    openBtn.appendChild(openBox);
-                    openBtn.appendChild(openText);
-                    openBtn.addEventListener('click', () => {
-                        window.open(PATHS.content, '_blank', 'noopener,noreferrer');
-                        if (panel.parentNode) panel.parentNode.removeChild(panel);
-                    });
-
-                    const vrCloseBtn = document.createElement('a-entity');
-                    vrCloseBtn.setAttribute('position', '2.8 2.0 0.2');
-                    vrCloseBtn.setAttribute('class', 'clickable');
-                    const closeBox = document.createElement('a-box');
-                    closeBox.setAttribute('width', '0.85');
-                    closeBox.setAttribute('height', '0.48');
-                    closeBox.setAttribute('depth', '0.1');
-                    closeBox.setAttribute('color', '#cc2222');
-                    closeBox.setAttribute('class', 'clickable');
-                    const closeText = document.createElement('a-text');
-                    closeText.setAttribute('value', 'CLOSE');
-                    closeText.setAttribute('position', '0 0 0.06');
-                    closeText.setAttribute('align', 'center');
-                    closeText.setAttribute('width', '1.8');
-                    closeText.setAttribute('color', '#ffffff');
-                    closeText.setAttribute('scale', '0.55 0.55 0.55');
-                    vrCloseBtn.appendChild(closeBox);
-                    vrCloseBtn.appendChild(closeText);
-                    vrCloseBtn.addEventListener('click', () => {
-                        if (panel.parentNode) panel.parentNode.removeChild(panel);
-                    });
-
-                    panel.appendChild(bg);
-                    panel.appendChild(title);
-                    panel.appendChild(preview);
-                    panel.appendChild(info);
-                    panel.appendChild(openBtn);
-                    panel.appendChild(vrCloseBtn);
-                    sceneEl.appendChild(panel);
-                    playClick(clickSound);
-                }
-
-                if (smartScreen) {
-                    smartScreen.addEventListener('click', () => {
-                        const isInVR = sceneEl && sceneEl.is && sceneEl.is('vr-mode');
-                        if (isInVR) {
-                            createVRContentPanel();
-                        } else if (screenOverlay && contentIframe) {
-                            contentIframe.src = PATHS.content;
-                            screenOverlay.style.display = 'flex';
-                            playClick(clickSound);
-                        }
-                    });
-                }
-                if (closeScreen) closeScreen.addEventListener('click', closeDesktopScreen);
-
-                // ---------- 360 video ----------
-                const videoBall = document.getElementById('video-ball');
-                const videoMode = document.getElementById('video-mode');
-                const video360 = document.getElementById('video360');
-                const exitButton = document.getElementById('exit-button');
-                const roomGroup = document.getElementById('room-group');
-                const rig = document.getElementById('rig');
-
-                function setEnvironmentVisible(visible) {
-                    const env = document.querySelector('[environment]');
-                    if (env) env.setAttribute('visible', visible);
-                }
-
-                function exit360() {
-                    if (roomGroup) roomGroup.setAttribute('visible', true);
-                    if (videoMode) videoMode.setAttribute('visible', false);
-                    if (rig) rig.setAttribute('position', '0 4 5');
-                    if (video360) {
-                        const vid = getMediaElement(video360);
-                        if (vid) {
-                            try {
-                                vid.pause();
-                                vid.removeAttribute('src');
-                                vid.load();
-                            } catch (_) { /* ignore */ }
-                        }
-                        // Drop videosphere source so Quest can reclaim decoder memory
-                        video360.removeAttribute('src');
-                        video360.setAttribute('src', '');
-                    }
-                    setEnvironmentVisible(true);
-                    playClick(clickSound);
-                }
-
-                if (videoBall) {
-                    videoBall.addEventListener('click', () => {
-                        if (roomGroup) roomGroup.setAttribute('visible', false);
-                        if (videoMode) videoMode.setAttribute('visible', true);
-                        if (video360) video360.setAttribute('src', PATHS.video360);
-                        setEnvironmentVisible(false);
-                        setTimeout(() => {
-                            const vid = getMediaElement(video360);
-                            if (vid) {
-                                vid.currentTime = 0;
-                                vid.play().catch(() => {});
-                            }
-                        }, 300);
-                        playClick(clickSound);
-                    });
-                }
-                if (exitButton) exitButton.addEventListener('click', exit360);
-
-                // ---------- Single Escape handler ----------
-                document.addEventListener('keydown', (e) => {
-                    if (e.key !== 'Escape') return;
-                    if (screenOverlay && screenOverlay.style.display === 'flex') {
-                        closeDesktopScreen();
-                        return;
-                    }
-                    if (isEntityVisible(viewer)) {
-                        closeModelViewer();
-                        return;
-                    }
-                    if (isEntityVisible(popout)) {
-                        closeAlbertPopout();
-                        return;
-                    }
-                    if (isEntityVisible(videoMode)) {
-                        exit360();
-                    }
-                });
-
-                // ---------- Sky / environment ----------
-                function setupReliableSky() {
-                    if (!sceneEl) return;
-                    if (document.querySelector('[environment]')) return;
-
-                    const env = document.createElement('a-entity');
-                    // Indoor conference room: no ground mesh (saves Quest fill-rate)
-                    env.setAttribute('environment', {
-                        preset: 'osiris',
-                        dressingAmount: 0,
-                        skyType: 'atmosphere',
-                        skyColor: '#88aaff',
-                        horizonColor: '#ffcc88',
-                        lighting: 'distant',
-                        lightPosition: { x: 0, y: 0.2, z: -0.2 },
-                        fog: 0.4,
-                        ground: 'none'
-                    });
-                    sceneEl.appendChild(env);
-
-                    if (statusEl) {
-                        statusEl.textContent = 'Silk Road Training WebXR';
-                        statusEl.style.color = '#0f0';
-                    }
-                    log('[SKY] environment component ready');
-                }
-
-                if (sceneEl.hasLoaded) {
-                    setupReliableSky();
-                } else {
-                    sceneEl.addEventListener('loaded', setupReliableSky, { once: true });
-                }
-            } catch (err) {
-                console.error('[CRITICAL] Runtime error in load handler:', err);
-                const statusEl = document.getElementById('status');
-                if (statusEl) {
-                    statusEl.textContent = 'Runtime error — check console';
-                    statusEl.style.color = '#f66';
-                }
-            }
-        });
-    })();
+            const message = 'Contact Silk Road Training to discuss options';
+            document.querySelectorAll('#modules .module, #contact-cta').forEach(function (el) {
+                el.addEventListener('click', function () { showToast(message); });
+            });
+        })();
     </script>
 </body>
 </html>

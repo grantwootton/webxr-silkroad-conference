@@ -1,0 +1,119 @@
+#: locale=en
+
+## E-Learning
+
+### Question Screen
+quizQuestion_C868D947_D439_8D20_41C0_E1A9ECD069B8.ok = OK
+
+### Report Screen
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.title = - SCORE -
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.completion = Completed
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.questionsCorrect = Correct
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.downloadCSV = Download .csv
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.questionsIncorrect = Incorrect
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.items = Items Found
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.questions = Questions
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.repeat = Repeat
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.submitToLMS = Submit
+quizScore_C86AE947_D439_8D20_41E2_5D12BA857CC1.elapsedTime = Time
+
+### Score Name
+score1.label = Score 1
+
+### Timeout Screen
+quizTimeout_C868D946_D439_8D20_41E6_9F4C98C303D3.title = - TIMEOUT -
+quizTimeout_C868D946_D439_8D20_41E6_9F4C98C303D3.repeat = Repeat
+quizTimeout_C868D946_D439_8D20_41E6_9F4C98C303D3.score = View Score
+
+## Hotspot
+
+### Text
+HotspotPanoramaOverlayTextImage_CC6AD4C5_D4CB_FB20_41E4_50B88480F6DD.text = Click through where you want to check first
+HotspotPanoramaOverlayTextImage_C116E5B5_D449_8560_41E6_DEEE200B3504.text = Click through where you want to check first
+HotspotPanoramaOverlayTextImage_C061994B_D449_8D27_41E1_9020F2D5B1CD.text = DANGER! Take cover first
+HotspotPanoramaOverlayTextImage_C0DCA216_D448_FF20_41D2_73158D02A05B.text = DANGER! Take cover first
+HotspotPanoramaOverlayTextImage_CD3EBB05_D4C8_8D20_41DB_60B01E5CE48A.text = Elevate the leg?
+HotspotPanoramaOverlayTextImage_C44C89CA_D448_8D20_41E2_7D15D2DD3A93.text = Getting low is ok. Now get in to better cover!
+HotspotPanoramaOverlayTextImage_F2447320_D195_4864_4178_2FF28428F30C.text = Good, into cover. Small arms fire has stopped but this bridge is a target for more shelling. Time to move, treat our casualties and leave
+HotspotPanoramaOverlayTextImage_DFED5555_CF93_482C_41D8_8F5BC47BDB31.text = Press this message to begin an interactive scenario. A 360º video will play to set the scene. Once the video stops, move around the scene using hotspots making decisions and learning from some training videos.
+HotspotPanoramaOverlayTextImage_CEED5DA1_D4C8_8560_41DC_FC679FBA7C13.text = Treat someone but keep low
+HotspotPanoramaOverlayTextImage_CDC592E9_D4C8_9CE0_4197_CEFF060D8B5C.text = Use a tourniquet?
+HotspotPanoramaOverlayTextImage_CCB5AD8F_D4C8_8520_41D6_571C9325123F.text = What now? Check for wounds?
+HotspotPanoramaOverlayTextImage_CEE5B138_D4D8_9D60_41E6_2D62E56FD831.text = What now? Manage his airway?
+HotspotPanoramaOverlayTextImage_C98BBEB7_D448_8760_41DD_32E604FF9192.text = Where is the danger you might have missed?
+HotspotPanoramaOverlayTextImage_C7F09DC4_D479_8520_41EA_6A5ED0F8DCB2.text = You've treated both, let's go!
+
+## Media
+
+### 360 Video
+
+### Audio
+audiores_C2A4DD7F_D077_58DC_41DF_F1A68A877F77.mp3Url = media/audio_C3FC2167_CFAF_48EC_41DA_6C03F19E1478_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F8551201_D19D_4824_41DD_0A60B39B4AEC.mp3Url = media/audio_CD3E4B04_D4C8_8D20_41B4_330EB3BD8140_en.mp3
+audiores_F830DD69_D195_38E4_41D3_0C45E4A8E7C8.mp3Url = media/audio_F85E0AF9_D197_79E4_41CF_C1AE660B02FB_en.mp3
+
+### Image
+imlevel_CE886730_D075_4864_41DE_E75CB4C384DB.url = media/media_C53CDC73_CF95_D8E4_41DE_39E4EB1ECDC8_HS_yx51upf8_en.png
+imlevel_C5C51545_D457_8520_41D7_C860BCD44AB5.url = media/panorama_C5301007_CF93_482C_41C8_4D62EB277959_HS_g6xqmd64_en.png
+imlevel_C1250EEB_D438_84E0_41E3_CD68C77CC99A.url = media/panorama_C530624C_CF93_C83C_41C1_BB2FFBC9F558_HS_6vzqj7vd_en.png
+imlevel_C76E4EEB_D47B_84E7_41CE_9A1D93BB6151.url = media/panorama_C5309CC7_CF93_782C_41E0_31640891C992_HS_fbbg0orj_en.png
+imlevel_C925E4C5_D449_BB20_41DC_A7EB504A62AE.url = media/panorama_C531C3B6_CF93_486C_41C8_FFAF9A150080_HS_a313gmx7_en.png
+imlevel_C916A42C_D449_BB60_41D9_46EFAA0CD61C.url = media/panorama_C531C3B6_CF93_486C_41C8_FFAF9A150080_HS_pxcpqxsn_en.png
+imlevel_C9237556_D449_8520_41E2_17A34633BF6C.url = media/panorama_C53C16A0_CF94_C864_41E1_B6AAAC6BA667_HS_w1tds8y1_en.png
+imlevel_CE8348ED_D4C8_8CE0_41DA_4559C770BCCF.url = media/panorama_C53F2A00_CF93_5824_41E6_38CC475EF4A0_HS_romdg4xs_en.png
+imlevel_C11A4F7B_D438_85E0_41D3_BB3FD292FB07.url = media/panorama_C53F8F0D_CF93_F83C_41DB_11CC02547DB2_HS_572rfqbn_en.png
+imlevel_CAD5E763_D449_85E0_41E3_CB1EA32B5848.url = media/panorama_C53FC4C2_CF93_C824_41D7_6C37BCBEB8CB_HS_ipt661y4_en.png
+imlevel_CC6D88FF_D4C8_8CE0_41C4_9A801A3E5E94.url = media/panorama_CCAB3D8E_D4C8_8520_41E3_B32CC767ABA7_HS_fknmqzja_en.png
+imlevel_CC6969FD_D4C8_8CE0_41E9_3FB9F0376C7D.url = media/panorama_CCAB3D8E_D4C8_8520_41E3_B32CC767ABA7_HS_iexg7wuu_en.png
+imlevel_CE89BBC6_D4C8_8D20_41C7_8B3495181981.url = media/panorama_CD38DB04_D4C8_8D20_41C0_DEE34C04C4FA_HS_ag3ckdux_en.png
+imlevel_CE88AAC4_D4C8_8F20_41E8_F136CE96728B.url = media/panorama_CD38DB04_D4C8_8D20_41C0_DEE34C04C4FA_HS_p3r9vpcl_en.png
+
+### Title
+video_C39ABB1C_D4D7_8D20_41E2_D8DED33D8727.label = Airway_Management
+panorama_C5423E41_CF95_5824_4190_09836FE77DE0.label = Bridge cover high
+panorama_C53C16A0_CF94_C864_41E1_B6AAAC6BA667.label = Bridge cover low
+media_C53CDC73_CF95_D8E4_41DE_39E4EB1ECDC8.label = Bridge opening sequence
+video_C3D71E98_D4C8_8720_41B9_C739A5DD3BBE.label = CAT for IFAK
+panorama_C531C3B6_CF93_486C_41C8_FFAF9A150080.label = Centre high
+panorama_C5301007_CF93_482C_41C8_4D62EB277959.label = Centre low
+video_C3AB8703_D4CF_8520_41CB_FFC29D93660D.label = Choking airway
+panorama_C5309CC7_CF93_782C_41E0_31640891C992.label = Hugh high
+panorama_C53F2A00_CF93_5824_41E6_38CC475EF4A0.label = Hugh low
+panorama_CD38DB04_D4C8_8D20_41C0_DEE34C04C4FA.label = Hugh low 2
+panorama_C530878B_CF93_4824_41E1_2488CFB3A977.label = Hugh tourniquet high
+panorama_C53FC4C2_CF93_C824_41D7_6C37BCBEB8CB.label = Hugh tourniquet low
+panorama_C530624C_CF93_C83C_41C1_BB2FFBC9F558.label = James high
+panorama_C53F8F0D_CF93_F83C_41DB_11CC02547DB2.label = James low
+panorama_CCAB3D8E_D4C8_8520_41E3_B32CC767ABA7.label = James low 2
+panorama_C5304BE1_CF93_DFE4_41E9_064C6B3ECF3D.label = James recover high
+panorama_C53F8883_CF93_382B_41D5_0D79B51BA42D.label = James recovery low
+video_C4405B78_CF9D_78E4_41D2_FDBF02F57E33.label = Leg bleeding
+
+### Video
+videores_F437FC41_D458_8B20_41E4_CBDD8806D002.url = media/media_C53CDC73_CF95_D8E4_41DE_39E4EB1ECDC8_en.mp4
+videores_F437FC41_D458_8B20_41E4_CBDD8806D002.posterURL = media/media_C53CDC73_CF95_D8E4_41DE_39E4EB1ECDC8_poster_en.jpg
+videolevel_F5D16ECB_D458_8720_41E6_63FA5EA185A8.url = media/video_C39ABB1C_D4D7_8D20_41E2_D8DED33D8727_en.mp4
+videolevel_F5D16ECB_D458_8720_41E6_63FA5EA185A8.posterURL = media/video_C39ABB1C_D4D7_8D20_41E2_D8DED33D8727_poster_en.jpg
+videolevel_F5D30E88_D458_8720_41D1_534E736C152B.url = media/video_C3AB8703_D4CF_8520_41CB_FFC29D93660D_en.mp4
+videolevel_F5D30E88_D458_8720_41D1_534E736C152B.posterURL = media/video_C3AB8703_D4CF_8520_41CB_FFC29D93660D_poster_en.jpg
+videolevel_F5D1DEF5_D458_84E0_41D0_B48A8219BF82.url = media/video_C3D71E98_D4C8_8720_41B9_C739A5DD3BBE_en.mp4
+videolevel_F5D1DEF5_D458_84E0_41D0_B48A8219BF82.posterURL = media/video_C3D71E98_D4C8_8720_41B9_C739A5DD3BBE_poster_en.jpg
+videolevel_F5D2AE5D_D458_8720_41CC_7F978F8E5D93.url = media/video_C4405B78_CF9D_78E4_41D2_FDBF02F57E33_en.mp4
+videolevel_F5D2AE5D_D458_8720_41CC_7F978F8E5D93.posterURL = media/video_C4405B78_CF9D_78E4_41D2_FDBF02F57E33_poster_en.jpg
+
+### Video Subtitles
+
+## Tour
+
+### Description
+tour.description = Interactive HE Scenario
+
+### Title
+tour.name = Bridge scenario

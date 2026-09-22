@@ -1,6 +1,7 @@
-# Dependencies and tooling
+# Dependencies and tooling — static site, no Node server on Vercel
 node_modules
 package-lock.json
+server.js
 .git
 .DS_Store
 scripts
@@ -12,9 +13,6 @@ cert.crt
 .env
 .env.*
 
-# Duplicate Rise libs (content loads from assets/content/lib only)
-assets/lib
-
 # Dev / temp
 tmp
 .tmp
@@ -22,6 +20,3 @@ assets/models/_compressed
 assets/videos/*.tmp.mp4
 assets/videos/*.original.mp4
 _local_backups
-
-# URL-encoded duplicate of the same PDF
-assets/content/assets/Production%20Travel%20Safety%20Training.pdf

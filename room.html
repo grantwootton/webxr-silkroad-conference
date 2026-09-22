@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Silk Road Training WebXR — Hostile Environment Demonstration">
+    <meta name="theme-color" content="#070806">
+    <title>Hostile Environment Training - WebXR</title>
+    <link rel="icon" href="assets/images/SR_logo.png" type="image/png">
+
+    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.0/dist/aframe-extras.min.js"></script>
+
+    <script>
+        AFRAME.registerComponent('play-bounds', {
+            schema: {
+                minX: { default: -18 }, maxX: { default: 34 },
+                minZ: { default: -18 }, maxZ: { default: 14 },
+                speed: { default: 3.2 }
+            },
+            init: function () {
+                this.stick = { x: 0, z: 0 };
+                window.__playStick = this.stick;
+            },
+            tick: function (_t, dt) {
+                const p = this.el.object3D.position;
+                const sec = Math.min((dt || 16) / 1000, 0.08);
+                const cam = document.getElementById('main-camera');
+                if (cam && cam.object3D && (this.stick.x || this.stick.z)) {
+                    const yaw = cam.object3D.rotation.y;
+                    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+                    const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+                    p.x += (this.stick.z * fx + this.stick.x * rx) * this.data.speed * sec;
+                    p.z += (this.stick.z * fz + this.stick.x * rz) * this.data.speed * sec;
+                }
+                p.x = Math.max(this.data.minX, Math.min(this.data.maxX, p.x));
+                p.z = Math.max(this.data.minZ, Math.min(this.data.maxZ, p.z));
+            }
+        });
+
+        // Stop the rig walking through the ruined building once that model is loaded.
+        // Horizontal raycasts against its meshes; floors and ceilings are ignored.
+        AFRAME.registerComponent('mesh-walls', {
+            schema: {
+                target: { type: 'string', default: '#ruined-building' },
+                extra: { type: 'string', default: '' },
+                radius: { default: 0.42 },
+                heights: { type: 'string', default: '0.35 1.05 1.55' }
+            },
+            init: function () {
+                this.raycaster = new THREE.Raycaster();
+                this.prev = this.el.object3D.position.clone();
+                this.origin = new THREE.Vector3();
+                this.dir = new THREE.Vector3();
+                this.worldNormal = new THREE.Vector3();
+                this.heights = this.data.heights.split(/\s+/).map(parseFloat);
+                this.ready = false;
+                this.meshes = [];
+                this.el.sceneEl.addEventListener('loaded', () => this.collectMeshes());
+                const building = document.querySelector(this.data.target);
+                if (building) {
+                    building.addEventListener('model-loaded', () => this.collectMeshes());
+                }
+                setTimeout(() => this.collectMeshes(), 800);
+            },
+            collectMeshes: function () {
+                this.meshes = [];
+                const add = (root) => {
+                    if (!root || !root.object3D) return;
+                    root.object3D.updateMatrixWorld(true);
+                    root.object3D.traverse((obj) => {
+                        if (obj.isMesh && obj.geometry) this.meshes.push(obj);
+                    });
+                };
+                add(document.querySelector(this.data.target));
+                if (this.data.extra) document.querySelectorAll(this.data.extra).forEach(add);
+                this.ready = this.meshes.length > 0;
+            },
+            isWallHit: function (hit) {
+                if (!hit || !hit.face) return false;
+                this.worldNormal.copy(hit.face.normal);
+                if (hit.object && hit.object.matrixWorld) {
+                    this.worldNormal.transformDirection(hit.object.matrixWorld);
+                }
+                this.worldNormal.normalize();
+                return Math.abs(this.worldNormal.y) < 0.72;
+            },
+            blocked: function (from, direction, distance) {
+                if (!this.ready) this.collectMeshes();
+                if (!this.meshes.length) return false;
+                const far = distance + this.data.radius;
+                this.raycaster.far = far;
+                for (let i = 0; i < this.heights.length; i++) {
+                    this.origin.copy(from);
+                    this.origin.y += this.heights[i];
+                    this.raycaster.set(this.origin, direction);
+                    const hits = this.raycaster.intersectObjects(this.meshes, false);
+                    for (let h = 0; h < hits.length; h++) {
+                        if (this.isWallHit(hits[h]) && hits[h].distance < far) return true;
+                    }
+                }
+                return false;
+            },
+            tick: function () {
+                const p = this.el.object3D.position;
+                this.dir.set(p.x - this.prev.x, 0, p.z - this.prev.z);
+                const dist = this.dir.length();
+                if (dist < 0.0001) {
+                    this.prev.set(p.x, p.y, p.z);
+                    return;
+                }
+                this.dir.multiplyScalar(1 / dist);
+                if (this.blocked(this.prev, this.dir, dist)) {
+                    p.x = this.prev.x;
+                    p.z = this.prev.z;
+                } else {
+                    this.prev.set(p.x, p.y, p.z);
+                }
+            }
+        });
+
+        // Off-screen kit stays clickable through a hit box. The GLB is fetched when
+        // the visitor is near it, looks toward it, or the staggered queue reaches it.
+        AFRAME.registerComponent('lazy-gltf', {
+            schema: {
+                src: { type: 'string', default: '' },
+                width: { default: 1 },
+                height: { default: 1 },
+                depth: { default: 1 },
+                offset: { type: 'vec3', default: { x: 0, y: 0, z: 0 } },
+                distance: { default: 20 }
+            },
+            init: function () {
+                this.loaded = false;
+                this._cool = 0;
+                this._camPos = new THREE.Vector3();
+                this._objPos = new THREE.Vector3();
+                this._quat = new THREE.Quaternion();
+                this._forward = new THREE.Vector3();
+                const box = document.createElement('a-box');
+                box.setAttribute('class', 'clickable');
+                box.setAttribute('width', this.data.width);
+                box.setAttribute('height', this.data.height);
+                box.setAttribute('depth', this.data.depth);
+                const o = this.data.offset;
+                box.setAttribute('position', o.x + ' ' + o.y + ' ' + o.z);
+                box.setAttribute('material', 'opacity: 0; transparent: true; depthWrite: false; shader: flat');
+                box.setAttribute('shadow', 'cast: false; receive: false');
+                this.el.appendChild(box);
+                this.modelEl = document.createElement('a-gltf-model');
+                this.modelEl.setAttribute('class', 'clickable');
+                this.el.appendChild(this.modelEl);
+            },
+            loadNow: function () {
+                if (this.loaded || !this.data.src) return;
+                this.loaded = true;
+                this.modelEl.setAttribute('src', this.data.src);
+            },
+            tick: function (_t, dt) {
+                if (this.loaded) return;
+                this._cool += dt || 16;
+                if (this._cool < 350) return;
+                this._cool = 0;
+                const cam = document.getElementById('main-camera');
+                if (!cam || !cam.object3D) return;
+                cam.object3D.getWorldPosition(this._camPos);
+                this.el.object3D.getWorldPosition(this._objPos);
+                const dx = this._objPos.x - this._camPos.x;
+                const dz = this._objPos.z - this._camPos.z;
+                const dist2 = dx * dx + dz * dz;
+                const reach = this.data.distance;
+                if (dist2 < reach * reach) {
+                    this.loadNow();
+                    return;
+                }
+                cam.object3D.getWorldQuaternion(this._quat);
+                this._forward.set(0, 0, -1).applyQuaternion(this._quat);
+                const len = Math.sqrt(dist2) || 1;
+                const dot = (this._forward.x * dx + this._forward.z * dz) / len;
+                if (dot > 0.6 && dist2 < 48 * 48) this.loadNow();
+            }
+        });
+    </script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+        #status {
+            position: absolute; top: 10px; left: 10px; color: #c6b13a;
+            background: rgba(0,0,0,0.75); padding: 10px 12px; z-index: 100;
+            font-family: ui-monospace, monospace; font-size: 13px; border-radius: 6px;
+            pointer-events: none;
+        }
+        #instructions {
+            position: absolute; bottom: 20px; left: 20px; color: #fff;
+            background: rgba(0,0,0,0.75); padding: 12px 14px; border-radius: 8px;
+            max-width: 520px; font-size: 14px; line-height: 1.45; z-index: 100;
+        }
+        #instructions a { color: #c6b13a; }
+        body.in-vr #status,
+        body.in-vr #instructions,
+        body.in-vr #stick-wrap,
+        body.in-vr #toast { display: none !important; }
+
+        #screen-overlay, #video-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.95);
+            display: none; z-index: 200; align-items: center; justify-content: center; flex-direction: column;
+        }
+        #screen-frame {
+            width: 88%; height: 82%; background: #111;
+            border: 10px solid #c6b13a; border-radius: 16px; overflow: hidden;
+        }
+        #screen-frame iframe { width: 100%; height: 100%; border: none; }
+        #video-overlay video {
+            max-width: 90%; max-height: 78%;
+            border: 6px solid #c6b13a; border-radius: 12px;
+        }
+        #close-screen, #close-video {
+            position: absolute; top: 25px; right: 25px;
+            background: #ff2222; color: white; padding: 14px 28px;
+            border: none; border-radius: 8px; font-size: 20px; cursor: pointer; z-index: 210;
+        }
+        #toast {
+            position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+            background: rgba(10, 16, 12, 0.92); color: #e8e4d4;
+            border: 1px solid #c6b13a; border-radius: 10px;
+            padding: 12px 18px; max-width: min(90vw, 420px); text-align: center;
+            z-index: 150; opacity: 0; pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease; font-size: 15px;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        #stick-wrap {
+            display: none; position: absolute; left: 18px; bottom: 18px; width: 112px; height: 112px; z-index: 25;
+            border-radius: 999px; background: rgba(16,24,20,0.55); border: 1px solid rgba(198,177,58,0.35);
+            touch-action: none;
+        }
+        #stick {
+            position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+            border-radius: 999px; background: #c6b13a; opacity: 0.85; pointer-events: none;
+        }
+        @media (pointer: coarse) { #stick-wrap { display: block; } #instructions { left: 140px; } }
+    </style>
+</head>
+<body>
+    <div id="status">Silk Road Training — loading…</div>
+    <div id="instructions">
+        <strong>CONTROLS</strong><br>
+        Desktop: WASD or arrows to move, click to look. Phone: drag to look, use the on-screen stick.<br>
+        VR: Quest browser VR button, thumbsticks to walk, right laser + trigger to select.<br>
+        AR: hides the ruined building and sky so kit sits in your room.<br>
+        <a href="index.html">Leave room</a>
+    </div>
+    <div id="stick-wrap"><div id="stick"></div></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <div id="screen-overlay">
+        <button id="close-screen" type="button">✕ CLOSE SCREEN</button>
+        <div id="screen-frame">
+            <iframe id="content-iframe" title="Training content" allowfullscreen></iframe>
+        </div>
+    </div>
+    <div id="video-overlay">
+        <button id="close-video" type="button">✕ CLOSE VIDEO</button>
+        <video id="overlay-video" controls playsinline></video>
+    </div>
+
+    <a-scene
+        xr="ar: true; vr: true"
+        webxr="optionalFeatures: local-floor, bounded-floor, hit-test, dom-overlay"
+        xr-mode-ui="XRMode: xr"
+        background="color: #1a140e"
+        cursor="rayOrigin: mouse; fuse: false"
+        raycaster="objects: .clickable; far: 50"
+        shadow="type: pcf"
+        draco-decoder-path="https://www.gstatic.com/draco/versioned/decoders/1.5.6/"
+        renderer="colorManagement: true; antialias: true; highRefreshRate: true"
+        loading-screen="dotsColor: #c6b13a; backgroundColor: #070806; enabled: true">
+
+        <a-assets timeout="8000">
+            <img id="asset-logo" src="assets/images/SR_logo.png" crossorigin="anonymous">
+            <img id="asset-assailant" src="assets/images/active_assailant.jpg" crossorigin="anonymous">
+            <img id="asset-bridge" src="assets/images/bridge_scenario.png" crossorigin="anonymous">
+        </a-assets>
+
+        <!-- Sky and building stay out of a-assets. Desktop and Quest load them in JS. -->
+        <a-entity id="environment-group" visible="false">
+            <a-sky id="sky-dome" radius="80"></a-sky>
+
+            <a-gltf-model id="ruined-building" position="-2.962 0 0" rotation="0 24 0" scale="1 1 1"></a-gltf-model>
+
+            <a-image id="sr-logo" src="#asset-logo" position="-2.96 5.665 -5.611" rotation="0 0 0"
+                     width="5.2" height="3.4" material="shader: flat; side: double"></a-image>
+            <a-text value="WebXR" position="-2.872 4.091 -5.539" rotation="0 0 0" align="center" width="8" color="#c6b13a"
+                    font="https://cdn.aframe.io/fonts/Roboto-msdf.json"></a-text>
+        </a-entity>
+
+        <a-entity id="room-group">
+            <!-- Smart screen — Active Assailant HTML -->
+            <a-entity id="smart-screen" class="clickable" position="-12.906 5 2.804" rotation="0 90 0">
+                <a-box width="4.4" height="2.7" depth="0.12" color="#161616"></a-box>
+                <a-plane width="4.1" height="2.4" position="0 0 0.07"
+                         material="src: #asset-assailant; shader: flat; side: double" class="clickable"></a-plane>
+            </a-entity>
+            <a-text value="CLICK FOR ACTIVE ASSAILANT CONTENT"
+                    position="-12.906 3 2.804" rotation="0 90 0" align="center" width="4.6" color="#c6b13a"></a-text>
+
+            <!-- Bridge scenario frame -->
+            <a-entity id="bridge-frame" class="clickable" position="13.624 5 3.997" rotation="0 270 0">
+                <a-box width="4.4" height="2.7" depth="0.12" color="#2c1e16"></a-box>
+                <a-plane width="4.1" height="2.4" position="0 0 0.07"
+                         material="src: #asset-bridge; shader: flat; side: double" class="clickable"></a-plane>
+            </a-entity>
+            <a-text value="CLICK FOR 360 INTERACTIVE SCENARIO"
+                    position="13.624 3 3.997" rotation="0 270 0" align="center" width="4.6" color="#c6b13a"></a-text>
+
+            <!-- Shiny silver 360 orb -->
+            <a-sphere id="video-ball" class="clickable" position="-11.798 5.5 -2.947" radius="1"
+                      material="color: #f3f8fc; metalness: 0.55; roughness: 0.03; emissive: #9eb0bc; emissiveIntensity: 0.08; transparent: true; opacity: 0.42"
+                      animation="property: scale; to: 1.5 1.5 1.5; dur: 900; dir: alternate; loop: true; easing: easeInOutSine"></a-sphere>
+            <a-text value="CLICK FOR 360 VIDEO DEMO" position="-11.662 3.463 -3.054" rotation="0 90 0" align="center" width="4.2" color="#c6b13a"></a-text>
+
+            <!-- Kit models -->
+            <a-entity id="pmn2" class="clickable" position="13.583 0.403 -2.262" scale="0.25 0.25 0.25"
+                      lazy-gltf="src: assets/models/pmn2.glb; width: 3.2; height: 2; depth: 3.2; offset: 0 0.2 0; distance: 22"></a-entity>
+            <a-entity id="celox" class="clickable" position="11.846 0.278 7.31" scale="0.4 0.4 0.4" rotation="90 0 0"
+                      lazy-gltf="src: assets/models/celox_rapid_haemostat.glb; width: 1.9; height: 1.5; depth: 2; offset: 0 0 0; distance: 18"></a-entity>
+            <a-entity id="fpv-drone" class="clickable" position="-9.087 8.174 -15.505" scale="5 5 5"
+                      lazy-gltf="src: assets/models/fpv_drone.glb; width: 0.48; height: 0.56; depth: 0.3; offset: 0 0.02 -0.008; distance: 22"></a-entity>
+            <a-entity id="ballistic-plate" class="clickable" position="-2.376 1.266 -4.198" rotation="90 0 180" scale="0.3 0.3 0.3">
+                <a-gltf-model class="clickable" src="assets/models/level_iv_ballistic_plate.glb"></a-gltf-model>
+            </a-entity>
+            <a-entity id="ak47" class="clickable" position="-6.652 0.8 -4.154" rotation="0 90 270" scale="0.05 0.05 0.05">
+                <a-gltf-model class="clickable" src="assets/models/ak47.glb"></a-gltf-model>
+            </a-entity>
+            <a-entity id="landmine-sign" class="clickable" position="17.385 0.929 -3.724" rotation="0 270 0" scale="2 2 2"
+                      lazy-gltf="src: assets/models/landmine_sign.glb; width: 0.7; height: 1.91; depth: 0.5; offset: 0 0 -0.007; distance: 22"></a-entity>
+            <a-entity id="garmin" class="clickable" position="-1.5 0.759 1.158" rotation="270 0 0" scale="0.3 0.3 0.3">
+                <a-gltf-model class="clickable" src="assets/models/garmin_inreach_mini.glb"></a-gltf-model>
+            </a-entity>
+            <a-entity id="cover" class="clickable" position="7.873 1.782 -4.041" rotation="0 0 0" scale="6 6 6"
+                      lazy-gltf="src: assets/models/brick_and_sandbag.glb; width: 1.91; height: 0.5; depth: 0.35; offset: 0 0.001 -0.005; distance: 20"></a-entity>
+            <a-entity id="correspondent" class="clickable" position="31.935 0.64 -3.149" rotation="0 270 0" scale="3 3 3"
+                      lazy-gltf="src: assets/models/war_correspondent.glb; width: 0.8; height: 1.6; depth: 0.7; offset: -0.019 -0.124 -0.012; distance: 22"></a-entity>
+
+            <!-- Casualty + blood + invisible hotspots -->
+            <a-gltf-model src="assets/models/blood_spattered.glb"
+                          position="3.393 0.339 7.375" rotation="0 90 0" scale="0.2 0.2 0.2"></a-gltf-model>
+            <a-gltf-model id="casualty-model" src="assets/models/female_casualty.glb"
+                          position="8.282 0.725 4.814" rotation="0 90 0" scale="5 5 5"
+                          shadow="cast: true; receive: true"></a-gltf-model>
+            <a-entity id="hotspot-head" class="clickable hotspot"
+                      position="9.328 1.026 4.931"
+                      geometry="primitive: plane; width: 0.55; height: 0.35"
+                      material="opacity: 0; transparent: true; side: double"
+                      rotation="-90 0 0"></a-entity>
+            <a-entity id="hotspot-leg" class="clickable hotspot"
+                      position="4.822 0.737 5.031"
+                      geometry="primitive: plane; width: 0.55; height: 0.4"
+                      material="opacity: 0; transparent: true; side: double"
+                      rotation="-90 0 0"></a-entity>
+            <a-text value="CLICK THE AREA FOR FIRST AID TREATMENT"
+                      position="6.15 2.688 9.998" rotation="0 180 0" align="center" width="4.4" color="#e8e4d4"></a-text>
+        </a-entity>
+
+        <!-- 360 dome -->
+        <a-entity id="video-mode" visible="false">
+            <a-videosphere id="video360" radius="22" loop="true"
+                           material="shader: flat; side: back; transparent: false"></a-videosphere>
+            <a-plane id="exit-button" position="0 2.2 -6" rotation="0 0 0" width="5" height="1.6"
+                     material="color: #ff2222; emissive: #ff0000; shader: flat" class="clickable">
+                <a-text value="EXIT 360 VIDEO" position="0 0 0.1" align="center" width="5" color="#ffffff"></a-text>
+            </a-plane>
+        </a-entity>
+
+        <!-- Model viewer -->
+        <a-entity id="model-viewer" visible="false" scale="0.5 0.5 0.5">
+            <a-box width="6.2" height="5.4" depth="0.35" color="#0d1f2d" opacity="0.3"></a-box>
+            <a-text id="viewer-title" value="MODEL INSPECTOR" position="0 2.35 0.25" align="center" width="5.5" color="#c6b13a"></a-text>
+            <a-entity id="viewer-model" position="0 0.15 0.25"></a-entity>
+            <a-plane width="5.8" height="1.9" position="0 -1.85 0.22" color="#0a1620" opacity="0.92">
+                <a-text id="viewer-info" value="" position="0 0 0.12" align="center" width="5.3" color="#e8e4d4" wrap-count="48"></a-text>
+            </a-plane>
+            <a-plane id="viewer-drag-plane" width="5.5" height="3.2" position="0 0.4 0.3"
+                     material="opacity: 0; transparent: true" class="clickable"></a-plane>
+            <a-entity id="viewer-close" position="2.7 2.4 1.1" class="clickable">
+                <a-box class="clickable" width="1.2" height="0.6" depth="0.15" color="#cc2222"></a-box>
+                <a-text value="CLOSE" position="0 0 0.1" align="center" width="2" color="#ffffff" scale="0.7 0.7 0.7"></a-text>
+            </a-entity>
+            <a-entity id="viewer-reset" position="1.3 2.4 1.1" class="clickable">
+                <a-box class="clickable" width="1.5" height="0.6" depth="0.15" color="#3366aa"></a-box>
+                <a-text value="RESET" position="0 0 0.1" align="center" width="2.5" color="#ffffff" scale="0.65 0.65 0.65"></a-text>
+            </a-entity>
+            <a-entity id="rotate-left" position="-2.3 0.15 1.15" class="clickable">
+                <a-box class="clickable" width="0.9" height="0.9" depth="0.15" color="#c6b13a"></a-box>
+                <a-text value="<" position="0 0 0.12" align="center" width="3" color="#111" scale="1.2 1.2 1.2"></a-text>
+            </a-entity>
+            <a-entity id="rotate-right" position="2.3 0.15 1.15" class="clickable">
+                <a-box class="clickable" width="0.9" height="0.9" depth="0.15" color="#c6b13a"></a-box>
+                <a-text value=">" position="0 0 0.12" align="center" width="3" color="#111" scale="1.2 1.2 1.2"></a-text>
+            </a-entity>
+        </a-entity>
+
+        <!-- Image viewer -->
+        <a-entity id="image-viewer" visible="false" scale="0.5 0.5 0.5">
+            <a-box width="6.2" height="5.4" depth="0.35" color="#0d1f2d" opacity="0.3"></a-box>
+            <a-text id="image-viewer-title" value="INFORMATION" position="0 2.35 0.25" align="center" width="5.5" color="#c6b13a"></a-text>
+            <a-image id="image-viewer-img" width="5.0" height="2.6" position="0 0.55 0.28" material="shader: flat"></a-image>
+            <a-plane width="5.8" height="1.6" position="0 -1.55 0.22" color="#0a1620" opacity="0.94">
+                <a-text id="image-viewer-body" value="" position="0 0 0.12" align="center" width="5.3" color="#e8e4d4" wrap-count="46"></a-text>
+            </a-plane>
+            <a-entity id="image-viewer-close" position="2.7 2.4 1.1" class="clickable">
+                <a-box class="clickable" width="1.2" height="0.6" depth="0.15" color="#cc2222"></a-box>
+                <a-text value="CLOSE" position="0 0 0.1" align="center" width="2" color="#ffffff" scale="0.7 0.7 0.7"></a-text>
+            </a-entity>
+        </a-entity>
+
+        <!-- Video viewer -->
+        <a-entity id="video-viewer" visible="false" scale="0.5 0.5 0.5">
+            <a-box width="6.2" height="5.4" depth="0.35" color="#0d1f2d" opacity="0.3"></a-box>
+            <a-text id="video-viewer-title" value="VIDEO" position="0 2.35 0.25" align="center" width="5.5" color="#c6b13a"></a-text>
+            <a-video id="video-viewer-video" width="5.4" height="2.55" position="0 0.55 0.28"
+                     material="shader: flat" autoplay="false" loop="false"></a-video>
+            <a-plane width="5.8" height="1.6" position="0 -1.55 0.22" color="#0a1620" opacity="0.94">
+                <a-text id="video-viewer-info" value="" position="0 0 0.12" align="center" width="5.3" color="#e8e4d4" wrap-count="46"></a-text>
+            </a-plane>
+            <a-entity id="video-viewer-close" position="2.7 2.4 1.1" class="clickable">
+                <a-box class="clickable" width="1.2" height="0.6" depth="0.15" color="#cc2222"></a-box>
+                <a-text value="CLOSE" position="0 0 0.1" align="center" width="2" color="#ffffff" scale="0.7 0.7 0.7"></a-text>
+            </a-entity>
+        </a-entity>
+
+        <a-entity id="rig" movement-controls="fly: false; speed: 0.12" play-bounds mesh-walls position="-9.224 2.9 7.768">
+            <a-camera id="main-camera" look-controls="pointerLockEnabled: true" position="0 1.6 0"></a-camera>
+            <a-entity id="left-hand" meta-touch-controls="hand: left"></a-entity>
+            <a-entity id="right-hand"
+                      meta-touch-controls="hand: right"
+                      laser-controls="hand: right; lineColor: #c6b13a; lineOpacity: 0.85"
+                      raycaster="objects: .clickable; far: 50; lineColor: #c6b13a; lineOpacity: 0.5"></a-entity>
+        </a-entity>
+
+        <a-entity light="type: ambient; color: #ffd8b0; intensity: 0.55"></a-entity>
+        <a-entity light="type: directional; color: #ffb068; intensity: 0.85; castShadow: true" position="4 10 -5"></a-entity>
+        <a-entity light="type: hemisphere; color: #7aa0c8; groundColor: #3a2a1c; intensity: 0.35"></a-entity>
+
+        <a-entity id="click-sound" sound="src: url(assets/sounds/click.wav); volume: 0.5; positional: false"></a-entity>
+        <a-entity id="ambient-sound" sound="src: url(assets/sounds/battle_and_drone.mp3); volume: 0.28; loop: true; autoplay: true; positional: false"></a-entity>
+    </a-scene>
+
+    <script>
+    (function () {
+        'use strict';
+
+        function getTHREE() { return window.THREE || (window.AFRAME && window.AFRAME.THREE) || null; }
+        function isEntityVisible(el) {
+            if (!el) return false;
+            const v = el.getAttribute('visible');
+            return v === true || v === 'true';
+        }
+        function playClick(soundEl) {
+            if (soundEl && soundEl.components && soundEl.components.sound) {
+                try { soundEl.components.sound.playSound(); } catch (_) {}
+            }
+        }
+        function showToast(msg, ms) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(showToast._tid);
+            showToast._tid = setTimeout(function () { t.classList.remove('show'); }, ms || 3200);
+        }
+        function parseRotationRadians(rotStr) {
+            if (!rotStr) return { rotX: 0, rotY: 0 };
+            const parts = String(rotStr).split(/\s+/).map(parseFloat);
+            return { rotX: (parts[0] || 0) * (Math.PI / 180), rotY: (parts[1] || 0) * (Math.PI / 180) };
+        }
+        function pauseAmbient() {
+            const el = document.getElementById('ambient-sound');
+            if (el && el.components && el.components.sound) {
+                try { el.components.sound.pauseSound(); } catch (_) {}
+            }
+        }
+        function resumeAmbient() {
+            const el = document.getElementById('ambient-sound');
+            if (el && el.components && el.components.sound) {
+                try { el.components.sound.playSound(); } catch (_) {}
+            }
+        }
+        function getMediaElement(aEl) {
+            try { return aEl && aEl.components && aEl.components.material && aEl.components.material.material && aEl.components.material.material.map && aEl.components.material.material.map.image; }
+            catch (_) { return null; }
+        }
+        function positionViewerInFrontOfCamera(viewerEl) {
+            const cameraEl = document.getElementById('main-camera');
+            const THREE = getTHREE();
+            if (!cameraEl || !cameraEl.object3D || !THREE) {
+                viewerEl.setAttribute('position', '0 1.6 -2.4');
+                return;
+            }
+            const camPos = new THREE.Vector3();
+            cameraEl.object3D.getWorldPosition(camPos);
+            const camQuat = new THREE.Quaternion();
+            cameraEl.object3D.getWorldQuaternion(camQuat);
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camQuat);
+            const newPos = camPos.clone().add(forward.multiplyScalar(2.4));
+            newPos.y = Math.max(1.2, Math.min(2.4, newPos.y));
+            viewerEl.setAttribute('position', newPos.x.toFixed(2) + ' ' + newPos.y.toFixed(2) + ' ' + newPos.z.toFixed(2));
+            setTimeout(function () {
+                if (viewerEl.object3D && cameraEl.object3D) {
+                    const lookTarget = new THREE.Vector3();
+                    cameraEl.object3D.getWorldPosition(lookTarget);
+                    viewerEl.object3D.lookAt(lookTarget);
+                }
+            }, 40);
+        }
+
+        const PATHS = {
+            content: 'assets/content/index.html',
+            contentPreview: 'assets/images/active_assailant.jpg',
+            bridge: 'assets/bridge_scenario/index.htm',
+            bridgePreview: 'assets/images/bridge_scenario.png',
+            video360: 'assets/videos/360_Demo_360.mp4',
+            landing: 'index.html'
+        };
+
+        const modelData = {
+            pmn2: {
+                src: 'assets/models/pmn2.glb',
+                viewerScale: '1.4 1.4 1.4',
+                viewerPosition: '0 0.2 0',
+                title: 'PMN-2 Land Mine',
+                info: 'This is a Russian high explosive blast mine. Pressure-actuated, anti-personnel landmine which is designed to wound or kill by its HE blast effect.'
+            },
+            celox: {
+                src: 'assets/models/celox_rapid_haemostat.glb',
+                viewerScale: '1.2 1.2 1.2',
+                viewerPosition: '0 0.25 0',
+                title: 'Celox Rapid',
+                info: 'This Haemostatic Z-Fold gauze works with just 60 seconds compression, or until bleeding stops. A component of a hostile environment Individual First Aid Kit (IFAK).'
+            },
+            'fpv-drone': {
+                src: 'assets/models/fpv_drone.glb',
+                viewerScale: '6 6 6',
+                viewerPosition: '0 0.15 0',
+                title: 'FPV Drones',
+                info: 'If you hear or see an FPV drone in a conflict zone, immediately seek hard cover—such as a substantial building, basement, trench, or solid wall—and stay away from windows and exterior walls. Do not run into the open, film it, approach a crashed drone, or leave cover until authorities give an all-clear. After an attack, beware of secondary hazards and report injuries, fires, structural damage, or drone debris to emergency services from a safe location.'
+            },
+            'ballistic-plate': {
+                src: 'assets/models/level_iv_ballistic_plate.glb',
+                viewerScale: '0.6 0.6 0.6',
+                viewerPosition: '0 0.15 0',
+                title: 'Level IV Ballistic Plate',
+                info: 'Always ensure your Level IV plates are from a reputable manufacturer and are NIJ-certified to guarantee they can actually stop armour-piercing rounds. Periodically inspect the plates for cracks or structural damage and replace them immediately if they are dropped or compromised.'
+            }
+        };
+
+        const imageData = {
+            ak47: {
+                img: 'assets/images/change_lever.gif',
+                title: 'AK-47',
+                body: 'The AK-47 has an effective range of approximately 300 to 400 meters, though it can fire projectiles much further with significantly decreased accuracy. Its primary capabilities are high stopping power and the ability to penetrate light cover, combined with a robust design that prevents jamming. Be situationally aware of the weapon handler and the change lever; this gap means it is unsafe.'
+            },
+            'landmine-sign': {
+                img: 'assets/images/mine_signs.jpeg',
+                title: 'Land Mine Signs',
+                body: 'Land mine warning signs are critical indicators that an area is contaminated with explosive remnants of war and must never be ignored. If you encounter a sign—which often features a skull and crossbones, a red triangle, or a picture of a mine—you should stop immediately, do not enter the marked area, and backtrack exactly along your original path to find a safe route. They could be improvised.'
+            },
+            garmin: {
+                img: 'assets/images/comms.jpeg',
+                title: 'Communication Plan',
+                body: 'A communication plan for hostile environments should establish strict check-in intervals and primary, alternate, contingency, and emergency (PACE) channels to ensure constant connectivity. Consider devices like a Garmin InReach Mini 2, which provides a vital lifeline via satellite messaging and SOS capabilities in areas where cellular networks are nonexistent or compromised.'
+            }
+        };
+
+        const videoData = {
+            cover: { src: 'assets/videos/range.mp4', title: 'Cover From Fire', info: 'This video shows the capability of an AK-47. Hard cover consists of double-thickness brick walls, concrete, trenches, very large trees and sandbags.' },
+            correspondent: { src: 'assets/videos/camera_profile.mp4', title: 'Your Profile', info: 'What do you look like through the sight of a gun?' },
+            'hotspot-head': { src: 'assets/videos/airway.mp4', title: 'Airway Management', info: "Think DR-CAB. A is for checking, clearing and opening the casualty's Airway." },
+            'hotspot-leg': { src: 'assets/videos/bolster_dressing.mp4', title: 'Bolster Bandage for Embedded Objects', info: 'Always manage Catastrophic Bleeding first, with a tourniquet or packing with pressure.' }
+        };
+
+        const sceneEl = document.querySelector('a-scene');
+        const statusEl = document.getElementById('status');
+        const clickSound = document.getElementById('click-sound');
+        const rig = document.getElementById('rig');
+        const roomGroup = document.getElementById('room-group');
+        const envGroup = document.getElementById('environment-group');
+        const viewer = document.getElementById('model-viewer');
+        const viewerModelContainer = document.getElementById('viewer-model');
+        const viewerTitle = document.getElementById('viewer-title');
+        const viewerInfo = document.getElementById('viewer-info');
+        const dragPlane = document.getElementById('viewer-drag-plane');
+        const imageViewer = document.getElementById('image-viewer');
+        const videoViewer = document.getElementById('video-viewer');
+        const videoMode = document.getElementById('video-mode');
+        const video360 = document.getElementById('video360');
+        const skyDome = document.getElementById('sky-dome');
+        const ruinedBuilding = document.getElementById('ruined-building');
+        const videoBall = document.getElementById('video-ball');
+
+        const ENV = {
+            sky: 'assets/images/warzone.jpg',
+            building: 'assets/models/ruined_building.glb'
+        };
+        let environmentLoaded = false;
+
+        const ORB_MATERIAL = 'color: #f3f8fc; metalness: 0.55; roughness: 0.03; emissive: #9eb0bc; emissiveIntensity: 0.08; transparent: true; opacity: 0.42';
+
+        function isPhoneClient() {
+            const q = new URLSearchParams(location.search);
+            if (q.get('ar') === '1') return true;
+            if (q.get('env') === '1') return false;
+            const ua = navigator.userAgent || '';
+            if (/Oculus|Quest|Pacific|Headset/i.test(ua)) return false;
+            if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+            // iPadOS, and iPhone "Request Desktop Website", report as a Mac.
+            const touchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+            return touchMac;
+        }
+
+        function clearBuildingWalls() {
+            const walls = rig && rig.components && rig.components['mesh-walls'];
+            if (!walls) return;
+            walls.meshes = [];
+            walls.ready = false;
+        }
+
+        function loadEnvironment() {
+            if (isPhoneClient()) return;
+            if (environmentLoaded) {
+                if (envGroup) envGroup.setAttribute('visible', true);
+                return;
+            }
+            if (skyDome) skyDome.setAttribute('src', ENV.sky);
+            if (ruinedBuilding) ruinedBuilding.setAttribute('src', ENV.building);
+            if (videoBall) videoBall.setAttribute('material', 'sphericalEnvMap', ENV.sky);
+            if (envGroup) envGroup.setAttribute('visible', true);
+            environmentLoaded = true;
+        }
+
+        function unloadEnvironment() {
+            if (envGroup) envGroup.setAttribute('visible', false);
+            if (!environmentLoaded) return;
+            if (skyDome) skyDome.removeAttribute('src');
+            if (ruinedBuilding) ruinedBuilding.removeAttribute('src');
+            if (videoBall) videoBall.setAttribute('material', ORB_MATERIAL);
+            environmentLoaded = false;
+            clearBuildingWalls();
+        }
+
+        let isDraggingViewer = false, prevMouseX = 0, prevMouseY = 0, rotX = 0, rotY = 0, initialRotX = 0, initialRotY = 0, initialScale = '1 1 1';
+
+        function hideModelViewer() {
+            if (!viewer) return;
+            if (viewerModelContainer) {
+                while (viewerModelContainer.firstChild) viewerModelContainer.removeChild(viewerModelContainer.firstChild);
+            }
+            viewer.setAttribute('visible', false);
+        }
+        function hideImageViewer() {
+            if (imageViewer) imageViewer.setAttribute('visible', false);
+            const img = document.getElementById('image-viewer-img');
+            if (img) img.setAttribute('src', '');
+        }
+        function hideVideoViewer() {
+            const vidEl = document.getElementById('video-viewer-video');
+            if (vidEl) {
+                try {
+                    const v = getMediaElement(vidEl);
+                    if (v && v.pause) { v.pause(); v.removeAttribute('src'); v.load(); }
+                } catch (_) {}
+                vidEl.removeAttribute('src');
+                vidEl.setAttribute('src', '');
+            }
+            if (videoViewer) videoViewer.setAttribute('visible', false);
+            const overlay = document.getElementById('video-overlay');
+            const ov = document.getElementById('overlay-video');
+            if (overlay) overlay.style.display = 'none';
+            if (ov) { try { ov.pause(); ov.removeAttribute('src'); ov.load(); } catch (_) {} }
+        }
+        function closeAllViewers() {
+            hideModelViewer();
+            hideImageViewer();
+            hideVideoViewer();
+            const panel = document.getElementById('vr-content-panel');
+            if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
+            const screenOverlay = document.getElementById('screen-overlay');
+            const iframe = document.getElementById('content-iframe');
+            if (screenOverlay) screenOverlay.style.display = 'none';
+            if (iframe) iframe.src = 'about:blank';
+            resumeAmbient();
+        }
+
+        function openModelViewer(data) {
+            if (!viewer || !viewerModelContainer || !data) return;
+            closeAllViewers();
+            pauseAmbient();
+            const modelEl = document.createElement('a-gltf-model');
+            modelEl.setAttribute('src', data.src);
+            modelEl.setAttribute('scale', data.viewerScale || '1 1 1');
+            modelEl.setAttribute('position', data.viewerPosition || '0 0.4 0');
+            if (data.viewerRotation) modelEl.setAttribute('rotation', data.viewerRotation);
+            viewerModelContainer.appendChild(modelEl);
+            const parsed = parseRotationRadians(data.viewerRotation);
+            initialRotX = parsed.rotX; initialRotY = parsed.rotY; rotX = initialRotX; rotY = initialRotY;
+            initialScale = data.viewerScale || '1 1 1';
+            setTimeout(function () { if (modelEl.object3D) modelEl.object3D.rotation.set(rotX, rotY, 0); }, 60);
+            if (viewerTitle) viewerTitle.setAttribute('value', data.title);
+            if (viewerInfo) viewerInfo.setAttribute('value', data.info);
+            positionViewerInFrontOfCamera(viewer);
+            viewer.setAttribute('visible', true);
+            playClick(clickSound);
+        }
+
+        function openImageViewer(opts) {
+            closeAllViewers();
+            pauseAmbient();
+            if (!imageViewer) return;
+            document.getElementById('image-viewer-title').setAttribute('value', opts.title);
+            document.getElementById('image-viewer-img').setAttribute('src', opts.img);
+            document.getElementById('image-viewer-body').setAttribute('value', opts.body);
+            positionViewerInFrontOfCamera(imageViewer);
+            imageViewer.setAttribute('visible', true);
+            playClick(clickSound);
+        }
+
+        function openVideoViewer(opts) {
+            closeAllViewers();
+            pauseAmbient();
+            if (!videoViewer) return;
+            const title = document.getElementById('video-viewer-title');
+            const info = document.getElementById('video-viewer-info');
+            const vidEl = document.getElementById('video-viewer-video');
+            if (title) title.setAttribute('value', (opts && opts.title) || 'VIDEO');
+            if (info) info.setAttribute('value', (opts && opts.info) || '');
+            if (vidEl) vidEl.setAttribute('src', (opts && opts.src) || '');
+            positionViewerInFrontOfCamera(videoViewer);
+            videoViewer.setAttribute('visible', true);
+            setTimeout(function () {
+                const media = getMediaElement(vidEl);
+                if (media) { media.currentTime = 0; media.play().catch(function () {}); }
+            }, 200);
+            playClick(clickSound);
+        }
+
+        function createVRContentPanel(opts) {
+            const existing = document.getElementById('vr-content-panel');
+            if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+            const panel = document.createElement('a-entity');
+            panel.id = 'vr-content-panel';
+            panel.setAttribute('position', '0 1.6 -2.6');
+            const bg = document.createElement('a-plane');
+            bg.setAttribute('width', '6.5'); bg.setAttribute('height', '4.8');
+            bg.setAttribute('color', '#111122'); bg.setAttribute('opacity', '0.92'); bg.setAttribute('side', 'double');
+            const title = document.createElement('a-text');
+            title.setAttribute('value', opts.title || 'Content');
+            title.setAttribute('position', '0 1.9 0.1'); title.setAttribute('align', 'center');
+            title.setAttribute('width', '5.5'); title.setAttribute('color', '#c6b13a');
+            const preview = document.createElement('a-image');
+            preview.setAttribute('src', opts.preview); preview.setAttribute('width', '5.2');
+            preview.setAttribute('height', '2.3'); preview.setAttribute('position', '0 0.2 0.1');
+            const info = document.createElement('a-text');
+            info.setAttribute('value', 'Click below to open the full content in your browser.');
+            info.setAttribute('position', '0 -1.4 0.1'); info.setAttribute('align', 'center');
+            info.setAttribute('width', '5'); info.setAttribute('color', '#dddddd');
+            const openBtn = document.createElement('a-entity');
+            openBtn.setAttribute('position', '0 -2.1 0.2'); openBtn.setAttribute('class', 'clickable');
+            const openBox = document.createElement('a-box');
+            openBox.setAttribute('width', '4'); openBox.setAttribute('height', '0.65'); openBox.setAttribute('depth', '0.1');
+            openBox.setAttribute('color', '#8a7a22'); openBox.setAttribute('class', 'clickable');
+            const openText = document.createElement('a-text');
+            openText.setAttribute('value', 'OPEN IN BROWSER'); openText.setAttribute('position', '0 0 0.06');
+            openText.setAttribute('align', 'center'); openText.setAttribute('width', '3.8'); openText.setAttribute('color', '#ffffff');
+            openBtn.appendChild(openBox); openBtn.appendChild(openText);
+            openBtn.addEventListener('click', function () {
+                window.open(opts.contentUrl, '_blank', 'noopener,noreferrer');
+                if (panel.parentNode) panel.parentNode.removeChild(panel);
+                resumeAmbient();
+            });
+            const vrCloseBtn = document.createElement('a-entity');
+            vrCloseBtn.setAttribute('position', '2.8 2.0 0.2'); vrCloseBtn.setAttribute('class', 'clickable');
+            const closeBox = document.createElement('a-box');
+            closeBox.setAttribute('width', '0.85'); closeBox.setAttribute('height', '0.48'); closeBox.setAttribute('depth', '0.1');
+            closeBox.setAttribute('color', '#cc2222'); closeBox.setAttribute('class', 'clickable');
+            const closeText = document.createElement('a-text');
+            closeText.setAttribute('value', 'CLOSE'); closeText.setAttribute('position', '0 0 0.06');
+            closeText.setAttribute('align', 'center'); closeText.setAttribute('width', '1.8'); closeText.setAttribute('color', '#ffffff');
+            vrCloseBtn.appendChild(closeBox); vrCloseBtn.appendChild(closeText);
+            vrCloseBtn.addEventListener('click', function () {
+                if (panel.parentNode) panel.parentNode.removeChild(panel);
+                resumeAmbient();
+            });
+            panel.appendChild(bg); panel.appendChild(title); panel.appendChild(preview);
+            panel.appendChild(info); panel.appendChild(openBtn); panel.appendChild(vrCloseBtn);
+            sceneEl.appendChild(panel);
+            positionViewerInFrontOfCamera(panel);
+            playClick(clickSound);
+        }
+
+        function openSmartScreen(config) {
+            closeAllViewers();
+            pauseAmbient();
+            const isInVR = sceneEl && sceneEl.is && sceneEl.is('vr-mode');
+            if (isInVR) {
+                createVRContentPanel(config);
+            } else {
+                const overlay = document.getElementById('screen-overlay');
+                const iframe = document.getElementById('content-iframe');
+                if (iframe) iframe.src = config.contentUrl;
+                if (overlay) overlay.style.display = 'flex';
+                playClick(clickSound);
+            }
+        }
+
+        function exit360() {
+            if (roomGroup) roomGroup.setAttribute('visible', true);
+            if (envGroup && !isPhoneClient() && !(sceneEl.is && sceneEl.is('ar-mode'))) {
+                envGroup.setAttribute('visible', true);
+            }
+            if (videoMode) videoMode.setAttribute('visible', false);
+            if (rig) rig.setAttribute('position', '-9.224 2.9 7.768');
+            if (video360) {
+                const vid = getMediaElement(video360);
+                if (vid) { try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch (_) {} }
+                video360.removeAttribute('src');
+                video360.setAttribute('src', '');
+            }
+            resumeAmbient();
+            playClick(clickSound);
+        }
+
+        function enter360() {
+            closeAllViewers();
+            pauseAmbient();
+            if (roomGroup) roomGroup.setAttribute('visible', false);
+            if (envGroup) envGroup.setAttribute('visible', false);
+            if (videoMode) videoMode.setAttribute('visible', true);
+            if (video360) video360.setAttribute('src', PATHS.video360);
+            if (rig) rig.setAttribute('position', '0 0 0');
+            setTimeout(function () {
+                const vid = getMediaElement(video360);
+                if (vid) { vid.currentTime = 0; vid.play().catch(function () {}); }
+            }, 280);
+            playClick(clickSound);
+        }
+
+        function applyModelRotation() {
+            const modelEl = viewerModelContainer && viewerModelContainer.querySelector('a-gltf-model');
+            if (modelEl && modelEl.object3D) {
+                modelEl.object3D.rotation.y = rotY;
+                modelEl.object3D.rotation.x = rotX;
+            }
+        }
+
+        function bindStick() {
+            const wrap = document.getElementById('stick-wrap');
+            const knob = document.getElementById('stick');
+            if (!wrap || !knob) return;
+            let active = false;
+            function setFromEvent(e) {
+                const r = wrap.getBoundingClientRect();
+                const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                let dx = e.clientX - cx, dy = e.clientY - cy;
+                const max = r.width * 0.36;
+                const len = Math.hypot(dx, dy) || 1;
+                if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+                knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+                if (window.__playStick) {
+                    window.__playStick.x = dx / max;
+                    window.__playStick.z = -dy / max;
+                }
+            }
+            wrap.addEventListener('pointerdown', function (e) {
+                active = true;
+                wrap.setPointerCapture(e.pointerId);
+                setFromEvent(e);
+            });
+            wrap.addEventListener('pointermove', function (e) { if (active) setFromEvent(e); });
+            function end(e) {
+                active = false;
+                knob.style.transform = '';
+                if (window.__playStick) { window.__playStick.x = 0; window.__playStick.z = 0; }
+                try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
+            }
+            wrap.addEventListener('pointerup', end);
+            wrap.addEventListener('pointercancel', end);
+        }
+
+        sceneEl.addEventListener('loaded', function () {
+            if (statusEl) statusEl.textContent = 'Silk Road Training — WebXR Demonstration';
+            bindStick();
+
+            if (isPhoneClient()) {
+                unloadEnvironment();
+                if (statusEl) statusEl.textContent = 'Phone / AR — sky and building not loaded';
+            } else {
+                loadEnvironment();
+            }
+
+            const lazyEls = Array.prototype.slice.call(document.querySelectorAll('[lazy-gltf]'));
+            lazyEls.sort(function (a, b) {
+                const pa = a.object3D.position;
+                const pb = b.object3D.position;
+                const ra = rig ? rig.object3D.position : { x: 0, z: 0 };
+                const da = (pa.x - ra.x) * (pa.x - ra.x) + (pa.z - ra.z) * (pa.z - ra.z);
+                const db = (pb.x - ra.x) * (pb.x - ra.x) + (pb.z - ra.z) * (pb.z - ra.z);
+                return da - db;
+            });
+            let lazyIndex = 0;
+            function pumpLazy() {
+                if (lazyIndex >= lazyEls.length) return;
+                const el = lazyEls[lazyIndex++];
+                const comp = el.components && el.components['lazy-gltf'];
+                if (comp) comp.loadNow();
+                setTimeout(pumpLazy, 600);
+            }
+            setTimeout(pumpLazy, 1600);
+
+            const ambientSound = document.getElementById('ambient-sound');
+            if (ambientSound && ambientSound.components && ambientSound.components.sound) {
+                try { ambientSound.components.sound.playSound(); } catch (_) {}
+            }
+
+            sceneEl.addEventListener('enter-vr', function () {
+                document.body.classList.add('in-vr');
+                if (!isPhoneClient() && !(sceneEl.is && sceneEl.is('ar-mode'))) loadEnvironment();
+            });
+            sceneEl.addEventListener('exit-vr', function () { document.body.classList.remove('in-vr'); });
+            sceneEl.addEventListener('enter-ar', function () {
+                document.body.classList.add('in-vr');
+                unloadEnvironment();
+                showToast('AR: sky and building not loaded — kit stays in your room');
+            });
+            sceneEl.addEventListener('exit-ar', function () {
+                document.body.classList.remove('in-vr');
+                if (!isPhoneClient() && envGroup && !isEntityVisible(videoMode)) loadEnvironment();
+            });
+
+            Object.keys(modelData).forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('click', function (e) {
+                    e.stopImmediatePropagation();
+                    openModelViewer(modelData[id]);
+                });
+            });
+            Object.keys(imageData).forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('click', function (e) {
+                    e.stopImmediatePropagation();
+                    openImageViewer(imageData[id]);
+                });
+            });
+            Object.keys(videoData).forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('click', function (e) {
+                    e.stopImmediatePropagation();
+                    openVideoViewer(videoData[id]);
+                });
+            });
+
+            const closeViewerBtn = document.getElementById('viewer-close');
+            const resetBtn = document.getElementById('viewer-reset');
+            if (closeViewerBtn) closeViewerBtn.addEventListener('click', function (e) { e.stopImmediatePropagation(); playClick(clickSound); closeAllViewers(); });
+            if (resetBtn) resetBtn.addEventListener('click', function (e) {
+                e.stopImmediatePropagation(); playClick(clickSound);
+                rotX = initialRotX; rotY = initialRotY;
+                const modelEl = viewerModelContainer && viewerModelContainer.querySelector('a-gltf-model');
+                if (modelEl) {
+                    if (modelEl.object3D) modelEl.object3D.rotation.set(rotX, rotY, 0);
+                    modelEl.setAttribute('scale', initialScale);
+                }
+            });
+            const rotateLeft = document.getElementById('rotate-left');
+            const rotateRight = document.getElementById('rotate-right');
+            if (rotateLeft) rotateLeft.addEventListener('click', function (e) { e.stopImmediatePropagation(); rotY -= 0.4; applyModelRotation(); playClick(clickSound); });
+            if (rotateRight) rotateRight.addEventListener('click', function (e) { e.stopImmediatePropagation(); rotY += 0.4; applyModelRotation(); playClick(clickSound); });
+            if (dragPlane) {
+                dragPlane.addEventListener('pointerdown', function (e) {
+                    if (!isEntityVisible(viewer)) return;
+                    isDraggingViewer = true; prevMouseX = e.clientX; prevMouseY = e.clientY;
+                    try { dragPlane.setPointerCapture(e.pointerId); } catch (_) {}
+                });
+            }
+            document.addEventListener('pointermove', function (e) {
+                if (!isDraggingViewer) return;
+                rotY += (e.clientX - prevMouseX) * 0.005;
+                rotX += (e.clientY - prevMouseY) * 0.005;
+                rotX = Math.max(-1.4, Math.min(1.4, rotX));
+                applyModelRotation();
+                prevMouseX = e.clientX; prevMouseY = e.clientY;
+            });
+            document.addEventListener('pointerup', function (e) {
+                if (isDraggingViewer && dragPlane) { try { dragPlane.releasePointerCapture(e.pointerId); } catch (_) {} }
+                isDraggingViewer = false;
+            });
+            document.addEventListener('wheel', function (e) {
+                if (!isEntityVisible(viewer) || !viewerModelContainer) return;
+                const modelEl = viewerModelContainer.querySelector('a-gltf-model');
+                if (!modelEl) return;
+                let currentScale = modelEl.getAttribute('scale');
+                if (typeof currentScale === 'string') {
+                    const parts = currentScale.split(/\s+/).map(parseFloat);
+                    currentScale = { x: parts[0] || 1, y: parts[1] || 1, z: parts[2] || 1 };
+                } else if (!currentScale) currentScale = { x: 1, y: 1, z: 1 };
+                const factor = e.deltaY > 0 ? 0.88 : 1.14;
+                modelEl.setAttribute('scale', Math.max(0.2, Math.min(12, currentScale.x * factor)) + ' ' + Math.max(0.2, Math.min(12, currentScale.y * factor)) + ' ' + Math.max(0.2, Math.min(12, currentScale.z * factor)));
+                e.preventDefault();
+            }, { passive: false });
+
+            const imageClose = document.getElementById('image-viewer-close');
+            if (imageClose) imageClose.addEventListener('click', function (e) { e.stopImmediatePropagation(); playClick(clickSound); closeAllViewers(); });
+            const videoClose = document.getElementById('video-viewer-close');
+            if (videoClose) videoClose.addEventListener('click', function (e) { e.stopImmediatePropagation(); playClick(clickSound); closeAllViewers(); });
+            const closeScreen = document.getElementById('close-screen');
+            if (closeScreen) closeScreen.addEventListener('click', closeAllViewers);
+            const closeVideo = document.getElementById('close-video');
+            if (closeVideo) closeVideo.addEventListener('click', closeAllViewers);
+
+            const smart = document.getElementById('smart-screen');
+            if (smart) smart.addEventListener('click', function () {
+                openSmartScreen({ title: 'Active Assailant', preview: PATHS.contentPreview, contentUrl: PATHS.content });
+            });
+            const bridge = document.getElementById('bridge-frame');
+            if (bridge) bridge.addEventListener('click', function () {
+                openSmartScreen({ title: '360 Interactive Scenario', preview: PATHS.bridgePreview, contentUrl: PATHS.bridge });
+            });
+
+            const ball = document.getElementById('video-ball');
+            if (ball) ball.addEventListener('click', enter360);
+            const exitBtn = document.getElementById('exit-button');
+            if (exitBtn) exitBtn.addEventListener('click', exit360);
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'Escape') return;
+                if (isEntityVisible(videoMode)) { exit360(); return; }
+                closeAllViewers();
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
