@@ -75,6 +75,13 @@
             width: 100%; height: 220px; object-fit: cover;
             background: #000; border-radius: 10px; display: block;
         }
+        .hero-card .video-embed {
+            position: relative; width: 100%; padding-bottom: 56.25%;
+            background: #000; border-radius: 10px; overflow: hidden;
+        }
+        .hero-card .video-embed iframe {
+            position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+        }
         .hero-card p { margin: 14px 0 0; color: var(--muted); font-size: 0.95rem; }
         section { padding: 18px 0 8px; }
         .section-title {
@@ -154,12 +161,20 @@
                 </p>
                 <div class="cta-row">
                     <a class="btn btn-primary" href="room.html">Enter The Scene</a>
+                    <a class="btn btn-ghost" href="assets/images/Silk_Road_Training_WebXR.pdf" download="Silk_Road_Training_WebXR.pdf">Download our brochure</a>
                     <button class="btn btn-ghost" type="button" id="contact-cta">Discuss full programme</button>
                 </div>
             </div>
             <aside class="hero-card">
-                <img src="assets/images/hero-landing.jpg" alt="Ruined building used as the WebXR training ground" decoding="async">
-                <p>Explore the ruined-building room and start interacting.</p>
+                <div class="video-embed">
+                    <iframe
+                        src="https://player.vimeo.com/video/1227356658?h=d7694b50e9"
+                        title="Silk Road Training WebXR"
+                        allow="autoplay; fullscreen; picture-in-picture; clipboard-write"
+                        allowfullscreen
+                        referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                </div>
+                <p>Watch the WebXR demonstration, then enter the scene.</p>
             </aside>
         </section>
 
