@@ -112,7 +112,7 @@
 
         function onVirtualTourEnded()
         {
-
+            window.location.href = '../../room.html';
         }
 
         function enableCookies()
@@ -324,6 +324,7 @@
     
 </head>
 <body>
+    <a href="../../room.html" style="position:fixed;left:12px;top:12px;z-index:30;background:#c6b13a;color:#14150b;font:700 14px/1 system-ui,sans-serif;padding:10px 14px;text-decoration:none;border-radius:6px;">BACK TO ROOM</a>
     <div id="preloadContainer" class="fill-viewport"><div style="z-index: 4; position: absolute; overflow: hidden; left: 0%; top: 50%; width: 100.00%; height: 10.00%" ><div style="text-align:left; color:#000; "><DIV STYLE="text-align:center;font-size:1.6666666666666663vmin;"><SPAN STYLE="display:inline-block; letter-spacing:0vmin; white-space:pre-wrap;color:#777777;font-size:1.67vmin;font-family:Arial, Helvetica, sans-serif;">Loading virtual tour. Please wait...</SPAN></DIV></div></div></div>
     <div id="viewer" class="fill-viewport"></div>
 </body>

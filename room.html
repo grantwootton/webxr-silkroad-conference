@@ -939,13 +939,23 @@
         function enterBridgeTour() {
             closeAllViewers();
             pauseAmbient();
-            if (roomGroup) roomGroup.setAttribute('visible', false);
-            if (envGroup) envGroup.setAttribute('visible', false);
-            if (videoMode) videoMode.setAttribute('visible', false);
-            if (bridgeMode) bridgeMode.setAttribute('visible', true);
-            if (rig) rig.setAttribute('position', '0 0 0');
-            openImmersiveBrowser(PATHS.bridge);
             playClick(clickSound);
+            // 3DVista must own the WebXR session. An iframe inside this room
+            // can only show a flat page. Leave A-Frame VR, then open the tour.
+            const tourUrl = PATHS.bridge + (PATHS.bridge.indexOf('#') === -1 ? '#ovrweb' : '');
+            let gone = false;
+            function go() {
+                if (gone) return;
+                gone = true;
+                window.location.href = tourUrl;
+            }
+            if (sceneEl && sceneEl.is && sceneEl.is('vr-mode') && sceneEl.exitVR) {
+                sceneEl.addEventListener('exit-vr', go, { once: true });
+                try { sceneEl.exitVR(); } catch (_) { go(); }
+                setTimeout(go, 900);
+            } else {
+                go();
+            }
         }
 
         function exitBridgeTour() {
