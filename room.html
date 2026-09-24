@@ -214,10 +214,17 @@
             max-width: 90%; max-height: 78%;
             border: 6px solid #c6b13a; border-radius: 12px;
         }
-        #close-screen, #close-video {
+        #close-screen, #close-video, #close-vr-browser {
             position: absolute; top: 25px; right: 25px;
             background: #ff2222; color: white; padding: 14px 28px;
             border: none; border-radius: 8px; font-size: 20px; cursor: pointer; z-index: 210;
+        }
+        #vr-browser-overlay {
+            position: absolute; inset: 0; background: transparent;
+            display: none; z-index: 220; flex-direction: column;
+        }
+        #vr-browser-overlay iframe {
+            flex: 1; width: 100%; border: 0; background: #000;
         }
         #toast {
             position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
@@ -262,10 +269,16 @@
         <button id="close-video" type="button">✕ CLOSE VIDEO</button>
         <video id="overlay-video" controls playsinline></video>
     </div>
+    <div id="vr-browser-overlay">
+        <button id="close-vr-browser" type="button">✕ EXIT BROWSER</button>
+        <iframe id="vr-browser-iframe" title="Immersive training content" allowfullscreen allow="autoplay; xr-spatial-tracking"></iframe>
+    </div>
+    <video id="kit-video" playsinline webkit-playsinline crossorigin="anonymous" preload="auto" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
+    <video id="sphere-video" playsinline webkit-playsinline crossorigin="anonymous" preload="auto" loop style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
 
     <a-scene
         xr="ar: true; vr: true"
-        webxr="optionalFeatures: local-floor, bounded-floor, hit-test, dom-overlay"
+        webxr="optionalFeatures: local-floor, bounded-floor, hit-test, dom-overlay; overlayElement: #vr-browser-overlay"
         xr-mode-ui="XRMode: xr"
         background="color: #1a140e"
         cursor="rayOrigin: mouse; fuse: false"
@@ -319,8 +332,8 @@
             <a-text value="CLICK FOR 360 VIDEO DEMO" position="-11.662 3.463 -3.054" rotation="0 90 0" align="center" width="4.2" color="#c6b13a"></a-text>
 
             <!-- Kit models -->
-            <a-entity id="pmn2" class="clickable" position="13.583 0.403 -2.262" scale="0.25 0.25 0.25"
-                      lazy-gltf="src: assets/models/pmn2.glb; width: 3.2; height: 2; depth: 3.2; offset: 0 0.2 0; distance: 22"></a-entity>
+            <a-entity id="claymore" class="clickable" position="1.957 0.539 -4.78" rotation="0 45 0" scale="0.5 0.5 0.5"
+                      lazy-gltf="src: assets/models/claymore_mine.glb; width: 3.2; height: 2; depth: 3.2; offset: 0 0.2 0; distance: 22"></a-entity>
             <a-entity id="celox" class="clickable" position="11.846 0.278 7.31" scale="0.4 0.4 0.4" rotation="90 0 0"
                       lazy-gltf="src: assets/models/celox_rapid_haemostat.glb; width: 1.9; height: 1.5; depth: 2; offset: 0 0 0; distance: 18"></a-entity>
             <a-entity id="fpv-drone" class="clickable" position="-9.087 8.174 -15.505" scale="5 5 5"
@@ -331,15 +344,13 @@
             <a-entity id="ak47" class="clickable" position="-6.652 0.8 -4.154" rotation="0 90 270" scale="0.05 0.05 0.05">
                 <a-gltf-model class="clickable" src="assets/models/ak47.glb"></a-gltf-model>
             </a-entity>
-            <a-entity id="landmine-sign" class="clickable" position="17.385 0.929 -3.724" rotation="0 270 0" scale="2 2 2"
-                      lazy-gltf="src: assets/models/landmine_sign.glb; width: 0.7; height: 1.91; depth: 0.5; offset: 0 0 -0.007; distance: 22"></a-entity>
             <a-entity id="garmin" class="clickable" position="-1.5 0.759 1.158" rotation="270 0 0" scale="0.3 0.3 0.3">
                 <a-gltf-model class="clickable" src="assets/models/garmin_inreach_mini.glb"></a-gltf-model>
             </a-entity>
-            <a-entity id="cover" class="clickable" position="7.873 1.782 -4.041" rotation="0 0 0" scale="6 6 6"
-                      lazy-gltf="src: assets/models/brick_and_sandbag.glb; width: 1.91; height: 0.5; depth: 0.35; offset: 0 0.001 -0.005; distance: 20"></a-entity>
-            <a-entity id="correspondent" class="clickable" position="31.935 0.64 -3.149" rotation="0 270 0" scale="3 3 3"
-                      lazy-gltf="src: assets/models/war_correspondent.glb; width: 0.8; height: 1.6; depth: 0.7; offset: -0.019 -0.124 -0.012; distance: 22"></a-entity>
+            <a-entity id="cover" class="clickable" position="12.972 0.345 -0.869" rotation="0 90 0" scale="2 2 2"
+                      lazy-gltf="src: assets/models/sandbag_barrier.glb; width: 1.91; height: 0.5; depth: 0.35; offset: 0 0.001 -0.005; distance: 20"></a-entity>
+            <a-entity id="correspondent" class="clickable" position="8.961 4.445 -4.045" rotation="0 270 0" scale="2.5 2.5 2.5"
+                      lazy-gltf="src: assets/models/camera_with_tripod.glb; width: 0.8; height: 1.6; depth: 0.7; offset: -0.019 -0.124 -0.012; distance: 22"></a-entity>
 
             <!-- Casualty + blood + invisible hotspots -->
             <a-gltf-model src="assets/models/blood_spattered.glb"
@@ -363,11 +374,21 @@
 
         <!-- 360 dome -->
         <a-entity id="video-mode" visible="false">
-            <a-videosphere id="video360" radius="22" loop="true"
+            <a-videosphere id="video360" src="#sphere-video" radius="22" loop="true"
                            material="shader: flat; side: back; transparent: false"></a-videosphere>
             <a-plane id="exit-button" position="0 2.2 -6" rotation="0 0 0" width="5" height="1.6"
                      material="color: #ff2222; emissive: #ff0000; shader: flat" class="clickable">
                 <a-text value="EXIT 360 VIDEO" position="0 0 0.1" align="center" width="5" color="#ffffff"></a-text>
+            </a-plane>
+        </a-entity>
+
+        <!-- VR-only 3DVista tour shell -->
+        <a-entity id="bridge-mode" visible="false">
+            <a-sphere id="bridge-sphere" radius="24"
+                      material="color: #050505; side: back; shader: flat"></a-sphere>
+            <a-plane id="exit-bridge" position="0 2.2 -6" width="5" height="1.6"
+                     material="color: #ff2222; emissive: #ff0000; shader: flat" class="clickable">
+                <a-text value="EXIT 360 TOUR" position="0 0 0.1" align="center" width="5" color="#ffffff"></a-text>
             </a-plane>
         </a-entity>
 
@@ -417,7 +438,7 @@
         <a-entity id="video-viewer" visible="false" scale="0.5 0.5 0.5">
             <a-box width="6.2" height="5.4" depth="0.35" color="#0d1f2d" opacity="0.3"></a-box>
             <a-text id="video-viewer-title" value="VIDEO" position="0 2.35 0.25" align="center" width="5.5" color="#c6b13a"></a-text>
-            <a-video id="video-viewer-video" width="5.4" height="2.55" position="0 0.55 0.28"
+            <a-video id="video-viewer-video" src="#kit-video" width="5.4" height="2.55" position="0 0.55 0.28"
                      material="shader: flat" autoplay="false" loop="false"></a-video>
             <a-plane width="5.8" height="1.6" position="0 -1.55 0.22" color="#0a1620" opacity="0.94">
                 <a-text id="video-viewer-info" value="" position="0 0 0.12" align="center" width="5.3" color="#e8e4d4" wrap-count="46"></a-text>
@@ -489,6 +510,122 @@
             try { return aEl && aEl.components && aEl.components.material && aEl.components.material.material && aEl.components.material.material.map && aEl.components.material.material.map.image; }
             catch (_) { return null; }
         }
+        function htmlVideoFor(el) {
+            if (!el) return null;
+            if (el.tagName === 'VIDEO') return el;
+            if (el.id === 'video-viewer-video') return document.getElementById('kit-video');
+            if (el.id === 'video360') return document.getElementById('sphere-video');
+            return getMediaElement(el);
+        }
+        function refreshVideoTexture(el) {
+            try {
+                const mat = el && el.components && el.components.material && el.components.material.material;
+                if (mat && mat.map) mat.map.needsUpdate = true;
+            } catch (_) {}
+        }
+        function stopHtmlVideo(video) {
+            if (!video) return;
+            try {
+                video.pause();
+                if (video.readyState > 0) video.currentTime = 0;
+            } catch (_) {}
+        }
+        function playHtmlVideo(video, src, meshEl) {
+            if (!video || !src) return;
+            function start() {
+                try {
+                    if (video.readyState > 0) video.currentTime = 0;
+                    refreshVideoTexture(meshEl);
+                    const playPromise = video.play();
+                    if (playPromise && playPromise.catch) {
+                        playPromise.catch(function () {
+                            video.muted = true;
+                            video.play().catch(function () {});
+                        });
+                    }
+                } catch (_) {}
+            }
+            video.onended = function () {
+                try {
+                    video.pause();
+                    if (video.readyState > 0) video.currentTime = 0;
+                    refreshVideoTexture(meshEl);
+                } catch (_) {}
+            };
+            const sameFile = (video.getAttribute('src') || video.src || '').indexOf(src) !== -1 && video.readyState >= 2;
+            if (sameFile) {
+                start();
+                return;
+            }
+            video.pause();
+            video.src = src;
+            video.load();
+            video.addEventListener('canplay', start, { once: true });
+            video.addEventListener('loadeddata', function () { refreshVideoTexture(meshEl); }, { once: true });
+        }
+        function rewindMedia(el) {
+            stopHtmlVideo(htmlVideoFor(el));
+        }
+        function playMediaFromStart(el, src) {
+            playHtmlVideo(htmlVideoFor(el), src, el);
+        }
+        function placePanelAtEntity(panel, sourceEl, distance) {
+            const THREE = getTHREE();
+            if (!panel || !sourceEl || !sourceEl.object3D || !THREE) {
+                positionViewerInFrontOfCamera(panel);
+                return;
+            }
+            sourceEl.object3D.updateMatrixWorld(true);
+            const pos = new THREE.Vector3();
+            const quat = new THREE.Quaternion();
+            sourceEl.object3D.getWorldPosition(pos);
+            sourceEl.object3D.getWorldQuaternion(quat);
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(quat);
+            pos.add(forward.multiplyScalar(distance || 1.35));
+            panel.setAttribute('position', pos.x.toFixed(3) + ' ' + pos.y.toFixed(3) + ' ' + pos.z.toFixed(3));
+            panel.object3D.quaternion.copy(quat);
+        }
+        function hideVrBrowserOverlay() {
+            const overlay = document.getElementById('vr-browser-overlay');
+            const frame = document.getElementById('vr-browser-iframe');
+            if (overlay) overlay.style.display = 'none';
+            if (frame) {
+                try { frame.removeAttribute('src'); } catch (_) {}
+                frame.src = 'about:blank';
+            }
+        }
+        function rebuildSkyDome() {
+            const group = document.getElementById('environment-group');
+            if (!group) return;
+            const old = document.getElementById('sky-dome');
+            if (old && old.parentNode) old.parentNode.removeChild(old);
+            const sky = document.createElement('a-sky');
+            sky.id = 'sky-dome';
+            sky.setAttribute('radius', '80');
+            sky.setAttribute('src', ENV.sky);
+            group.insertBefore(sky, group.firstChild);
+        }
+        function closeImmersiveBrowser() {
+            hideVrBrowserOverlay();
+            const mode = document.getElementById('bridge-mode');
+            if (mode) mode.setAttribute('visible', false);
+            if (roomGroup) roomGroup.setAttribute('visible', true);
+            if (rig) rig.setAttribute('position', '-9.224 2.9 7.768');
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    if (!isPhoneClient() && !(sceneEl.is && sceneEl.is('ar-mode'))) {
+                        rebuildSkyDome();
+                        loadEnvironment();
+                    }
+                });
+            });
+        }
+        function openImmersiveBrowser(url) {
+            const overlay = document.getElementById('vr-browser-overlay');
+            const frame = document.getElementById('vr-browser-iframe');
+            if (frame) frame.src = url;
+            if (overlay) overlay.style.display = 'flex';
+        }
         function positionViewerInFrontOfCamera(viewerEl) {
             const cameraEl = document.getElementById('main-camera');
             const THREE = getTHREE();
@@ -523,12 +660,12 @@
         };
 
         const modelData = {
-            pmn2: {
-                src: 'assets/models/pmn2.glb',
+            claymore: {
+                src: 'assets/models/claymore_mine.glb',
                 viewerScale: '1.4 1.4 1.4',
                 viewerPosition: '0 0.2 0',
-                title: 'PMN-2 Land Mine',
-                info: 'This is a Russian high explosive blast mine. Pressure-actuated, anti-personnel landmine which is designed to wound or kill by its HE blast effect.'
+                title: 'M18A1 Claymore Mine',
+                info: 'This is a directional fragmentation explosive that can remain dangerous even if it appears damaged, disconnected, or inactive. Do not touch, approach, move, or investigate it—leave the area by the same route, warn others, and contact emergency services.'
             },
             celox: {
                 src: 'assets/models/celox_rapid_haemostat.glb',
@@ -559,11 +696,6 @@
                 title: 'AK-47',
                 body: 'The AK-47 has an effective range of approximately 300 to 400 meters, though it can fire projectiles much further with significantly decreased accuracy. Its primary capabilities are high stopping power and the ability to penetrate light cover, combined with a robust design that prevents jamming. Be situationally aware of the weapon handler and the change lever; this gap means it is unsafe.'
             },
-            'landmine-sign': {
-                img: 'assets/images/mine_signs.jpeg',
-                title: 'Land Mine Signs',
-                body: 'Land mine warning signs are critical indicators that an area is contaminated with explosive remnants of war and must never be ignored. If you encounter a sign—which often features a skull and crossbones, a red triangle, or a picture of a mine—you should stop immediately, do not enter the marked area, and backtrack exactly along your original path to find a safe route. They could be improvised.'
-            },
             garmin: {
                 img: 'assets/images/comms.jpeg',
                 title: 'Communication Plan',
@@ -593,6 +725,7 @@
         const videoViewer = document.getElementById('video-viewer');
         const videoMode = document.getElementById('video-mode');
         const video360 = document.getElementById('video360');
+        const bridgeMode = document.getElementById('bridge-mode');
         const skyDome = document.getElementById('sky-dome');
         const ruinedBuilding = document.getElementById('ruined-building');
         const videoBall = document.getElementById('video-ball');
@@ -626,14 +759,14 @@
 
         function loadEnvironment() {
             if (isPhoneClient()) return;
-            if (environmentLoaded) {
-                if (envGroup) envGroup.setAttribute('visible', true);
-                return;
-            }
-            if (skyDome) skyDome.setAttribute('src', ENV.sky);
-            if (ruinedBuilding) ruinedBuilding.setAttribute('src', ENV.building);
-            if (videoBall) videoBall.setAttribute('material', 'sphericalEnvMap', ENV.sky);
-            if (envGroup) envGroup.setAttribute('visible', true);
+            const sky = document.getElementById('sky-dome');
+            if (sky) sky.setAttribute('src', ENV.sky);
+            const building = document.getElementById('ruined-building');
+            if (building && !building.getAttribute('src')) building.setAttribute('src', ENV.building);
+            const orb = document.getElementById('video-ball');
+            if (orb) orb.setAttribute('material', 'sphericalEnvMap', ENV.sky);
+            const group = document.getElementById('environment-group');
+            if (group) group.setAttribute('visible', true);
             environmentLoaded = true;
         }
 
@@ -662,20 +795,12 @@
             if (img) img.setAttribute('src', '');
         }
         function hideVideoViewer() {
-            const vidEl = document.getElementById('video-viewer-video');
-            if (vidEl) {
-                try {
-                    const v = getMediaElement(vidEl);
-                    if (v && v.pause) { v.pause(); v.removeAttribute('src'); v.load(); }
-                } catch (_) {}
-                vidEl.removeAttribute('src');
-                vidEl.setAttribute('src', '');
-            }
+            stopHtmlVideo(document.getElementById('kit-video'));
             if (videoViewer) videoViewer.setAttribute('visible', false);
             const overlay = document.getElementById('video-overlay');
             const ov = document.getElementById('overlay-video');
             if (overlay) overlay.style.display = 'none';
-            if (ov) { try { ov.pause(); ov.removeAttribute('src'); ov.load(); } catch (_) {} }
+            if (ov) stopHtmlVideo(ov);
         }
         function closeAllViewers() {
             hideModelViewer();
@@ -687,6 +812,10 @@
             const iframe = document.getElementById('content-iframe');
             if (screenOverlay) screenOverlay.style.display = 'none';
             if (iframe) iframe.src = 'about:blank';
+            const vrOverlay = document.getElementById('vr-browser-overlay');
+            const vrFrame = document.getElementById('vr-browser-iframe');
+            if (vrOverlay) vrOverlay.style.display = 'none';
+            if (vrFrame) vrFrame.src = 'about:blank';
             resumeAmbient();
         }
 
@@ -732,13 +861,9 @@
             const vidEl = document.getElementById('video-viewer-video');
             if (title) title.setAttribute('value', (opts && opts.title) || 'VIDEO');
             if (info) info.setAttribute('value', (opts && opts.info) || '');
-            if (vidEl) vidEl.setAttribute('src', (opts && opts.src) || '');
             positionViewerInFrontOfCamera(videoViewer);
             videoViewer.setAttribute('visible', true);
-            setTimeout(function () {
-                const media = getMediaElement(vidEl);
-                if (media) { media.currentTime = 0; media.play().catch(function () {}); }
-            }, 200);
+            playMediaFromStart(vidEl, (opts && opts.src) || '');
             playClick(clickSound);
         }
 
@@ -747,7 +872,6 @@
             if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
             const panel = document.createElement('a-entity');
             panel.id = 'vr-content-panel';
-            panel.setAttribute('position', '0 1.6 -2.6');
             const bg = document.createElement('a-plane');
             bg.setAttribute('width', '6.5'); bg.setAttribute('height', '4.8');
             bg.setAttribute('color', '#111122'); bg.setAttribute('opacity', '0.92'); bg.setAttribute('side', 'double');
@@ -759,7 +883,7 @@
             preview.setAttribute('src', opts.preview); preview.setAttribute('width', '5.2');
             preview.setAttribute('height', '2.3'); preview.setAttribute('position', '0 0.2 0.1');
             const info = document.createElement('a-text');
-            info.setAttribute('value', 'Click below to open the full content in your browser.');
+            info.setAttribute('value', 'Open the content here in VR. You stay in the headset.');
             info.setAttribute('position', '0 -1.4 0.1'); info.setAttribute('align', 'center');
             info.setAttribute('width', '5'); info.setAttribute('color', '#dddddd');
             const openBtn = document.createElement('a-entity');
@@ -768,13 +892,12 @@
             openBox.setAttribute('width', '4'); openBox.setAttribute('height', '0.65'); openBox.setAttribute('depth', '0.1');
             openBox.setAttribute('color', '#8a7a22'); openBox.setAttribute('class', 'clickable');
             const openText = document.createElement('a-text');
-            openText.setAttribute('value', 'OPEN IN BROWSER'); openText.setAttribute('position', '0 0 0.06');
+            openText.setAttribute('value', 'OPEN IN VR BROWSER'); openText.setAttribute('position', '0 0 0.06');
             openText.setAttribute('align', 'center'); openText.setAttribute('width', '3.8'); openText.setAttribute('color', '#ffffff');
             openBtn.appendChild(openBox); openBtn.appendChild(openText);
             openBtn.addEventListener('click', function () {
-                window.open(opts.contentUrl, '_blank', 'noopener,noreferrer');
                 if (panel.parentNode) panel.parentNode.removeChild(panel);
-                resumeAmbient();
+                openImmersiveBrowser(opts.contentUrl);
             });
             const vrCloseBtn = document.createElement('a-entity');
             vrCloseBtn.setAttribute('position', '2.8 2.0 0.2'); vrCloseBtn.setAttribute('class', 'clickable');
@@ -792,7 +915,9 @@
             panel.appendChild(bg); panel.appendChild(title); panel.appendChild(preview);
             panel.appendChild(info); panel.appendChild(openBtn); panel.appendChild(vrCloseBtn);
             sceneEl.appendChild(panel);
-            positionViewerInFrontOfCamera(panel);
+            const screen = document.getElementById('smart-screen');
+            if (screen) placePanelAtEntity(panel, screen, 1.45);
+            else positionViewerInFrontOfCamera(panel);
             playClick(clickSound);
         }
 
@@ -811,19 +936,30 @@
             }
         }
 
+        function enterBridgeTour() {
+            closeAllViewers();
+            pauseAmbient();
+            if (roomGroup) roomGroup.setAttribute('visible', false);
+            if (envGroup) envGroup.setAttribute('visible', false);
+            if (videoMode) videoMode.setAttribute('visible', false);
+            if (bridgeMode) bridgeMode.setAttribute('visible', true);
+            if (rig) rig.setAttribute('position', '0 0 0');
+            openImmersiveBrowser(PATHS.bridge);
+            playClick(clickSound);
+        }
+
+        function exitBridgeTour() {
+            closeImmersiveBrowser();
+            resumeAmbient();
+            playClick(clickSound);
+        }
+
         function exit360() {
             if (roomGroup) roomGroup.setAttribute('visible', true);
-            if (envGroup && !isPhoneClient() && !(sceneEl.is && sceneEl.is('ar-mode'))) {
-                envGroup.setAttribute('visible', true);
-            }
+            loadEnvironment();
             if (videoMode) videoMode.setAttribute('visible', false);
             if (rig) rig.setAttribute('position', '-9.224 2.9 7.768');
-            if (video360) {
-                const vid = getMediaElement(video360);
-                if (vid) { try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch (_) {} }
-                video360.removeAttribute('src');
-                video360.setAttribute('src', '');
-            }
+            stopHtmlVideo(document.getElementById('sphere-video'));
             resumeAmbient();
             playClick(clickSound);
         }
@@ -834,12 +970,8 @@
             if (roomGroup) roomGroup.setAttribute('visible', false);
             if (envGroup) envGroup.setAttribute('visible', false);
             if (videoMode) videoMode.setAttribute('visible', true);
-            if (video360) video360.setAttribute('src', PATHS.video360);
             if (rig) rig.setAttribute('position', '0 0 0');
-            setTimeout(function () {
-                const vid = getMediaElement(video360);
-                if (vid) { vid.currentTime = 0; vid.play().catch(function () {}); }
-            }, 280);
+            playMediaFromStart(video360, PATHS.video360);
             playClick(clickSound);
         }
 
@@ -1024,17 +1156,41 @@
             });
             const bridge = document.getElementById('bridge-frame');
             if (bridge) bridge.addEventListener('click', function () {
-                openSmartScreen({ title: '360 Interactive Scenario', preview: PATHS.bridgePreview, contentUrl: PATHS.bridge });
+                const isInVR = sceneEl && sceneEl.is && sceneEl.is('vr-mode');
+                if (isInVR) enterBridgeTour();
+                else openSmartScreen({ title: '360 Interactive Scenario', preview: PATHS.bridgePreview, contentUrl: PATHS.bridge });
             });
 
             const ball = document.getElementById('video-ball');
             if (ball) ball.addEventListener('click', enter360);
             const exitBtn = document.getElementById('exit-button');
             if (exitBtn) exitBtn.addEventListener('click', exit360);
+            const exitBridge = document.getElementById('exit-bridge');
+            if (exitBridge) exitBridge.addEventListener('click', exitBridgeTour);
+            const closeVrBrowser = document.getElementById('close-vr-browser');
+            if (closeVrBrowser) closeVrBrowser.addEventListener('click', function () {
+                exitBridgeTour();
+                closeAllViewers();
+            });
+            const vrFrame = document.getElementById('vr-browser-iframe');
+            if (vrFrame) {
+                vrFrame.addEventListener('load', function () {
+                    try {
+                        const href = vrFrame.contentWindow && vrFrame.contentWindow.location && vrFrame.contentWindow.location.href;
+                        if (href && href.indexOf('about:blank') !== -1) {
+                            const overlay = document.getElementById('vr-browser-overlay');
+                            if (overlay && overlay.style.display !== 'none' && overlay.style.display !== '') {
+                                /* ignore our own blanking after close */
+                            }
+                        }
+                    } catch (_) {}
+                });
+            }
 
             document.addEventListener('keydown', function (e) {
                 if (e.key !== 'Escape') return;
                 if (isEntityVisible(videoMode)) { exit360(); return; }
+                if (isEntityVisible(bridgeMode)) { exitBridgeTour(); return; }
                 closeAllViewers();
             });
         });
