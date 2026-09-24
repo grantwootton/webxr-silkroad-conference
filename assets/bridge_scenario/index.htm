@@ -105,9 +105,50 @@
                 tour.player.bind('enableCookies', enableCookies);
         }
 
+        function hideEnterVrGate()
+        {
+            var gate = document.getElementById('srt-enter-vr-gate');
+            if (gate) gate.style.display = 'none';
+        }
+
+        function clickFirst(el)
+        {
+            if (!el) return false;
+            try { el.click(); return true; } catch (e) { return false; }
+        }
+
+        function tryEnterTDVVR()
+        {
+            var i, nodes, el, label;
+            if (tour && tour.player) {
+                try { if (typeof tour.player.trigger === 'function') tour.player.trigger('webvr'); } catch (e) {}
+                try { if (typeof tour.player.trigger === 'function') tour.player.trigger('toggleVR'); } catch (e) {}
+                try { if (typeof tour.player.set === 'function') tour.player.set('webvr', true); } catch (e) {}
+            }
+            nodes = document.querySelectorAll('div,button,span,a,img');
+            for (i = 0; i < nodes.length; i++) {
+                el = nodes[i];
+                label = ((el.getAttribute('aria-label') || '') + ' ' + (el.title || '') + ' ' + (el.className || '') + ' ' + (el.id || '') + ' ' + (el.textContent || '')).toLowerCase();
+                if (label.indexOf('webvr') !== -1 || label.indexOf('webxr') !== -1 || /(^|[^a-z])vr([^a-z]|$)/.test(label)) {
+                    if (clickFirst(el)) return true;
+                }
+            }
+            return false;
+        }
+
+        function onEnterVrClicked()
+        {
+            hideEnterVrGate();
+            tryEnterTDVVR();
+            setTimeout(tryEnterTDVVR, 400);
+            setTimeout(tryEnterTDVVR, 1200);
+        }
+
         function onVirtualTourLoaded()
         {
             disposePreloader();
+            var gate = document.getElementById('srt-enter-vr-gate');
+            if (gate && navigator.xr) gate.style.display = 'flex';
         }
 
         function onVirtualTourEnded()
@@ -320,11 +361,24 @@
 		.fill-viewport.landscape-right { right: env(safe-area-inset-right); }
         #viewer { z-index:1; }
         #preloadContainer { z-index:2; opacity:0; background-color:rgba(255,255,255,1); transition: opacity 0.5s; -webkit-transition: opacity 0.5s; -moz-transition: opacity 0.5s; -o-transition: opacity 0.5s;}
+        #srt-enter-vr-gate {
+            display: none; position: fixed; inset: 0; z-index: 40;
+            background: rgba(7,8,6,0.72); align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+        }
+        #srt-enter-vr-gate button {
+            background: #c6b13a; color: #14150b; border: 0; border-radius: 10px;
+            font: 700 22px/1.1 system-ui, sans-serif; padding: 18px 28px; cursor: pointer;
+        }
+        #srt-enter-vr-gate p { color: #e8e4d4; font: 15px/1.4 system-ui, sans-serif; max-width: 420px; text-align: center; margin: 0; }
     </style>
     
 </head>
 <body>
-    <a href="../../room.html" style="position:fixed;left:12px;top:12px;z-index:30;background:#c6b13a;color:#14150b;font:700 14px/1 system-ui,sans-serif;padding:10px 14px;text-decoration:none;border-radius:6px;">BACK TO ROOM</a>
+    <a href="../../room.html" style="position:fixed;left:12px;top:12px;z-index:50;background:#c6b13a;color:#14150b;font:700 14px/1 system-ui,sans-serif;padding:10px 14px;text-decoration:none;border-radius:6px;">BACK TO ROOM</a>
+    <div id="srt-enter-vr-gate">
+        <button type="button" id="srt-enter-vr" onclick="onEnterVrClicked()">ENTER TOUR IN VR</button>
+        <p>Quest cannot start 3DVista VR from the room session. Tap this, then the goggles icon on the tour if it is still flat.</p>
+    </div>
     <div id="preloadContainer" class="fill-viewport"><div style="z-index: 4; position: absolute; overflow: hidden; left: 0%; top: 50%; width: 100.00%; height: 10.00%" ><div style="text-align:left; color:#000; "><DIV STYLE="text-align:center;font-size:1.6666666666666663vmin;"><SPAN STYLE="display:inline-block; letter-spacing:0vmin; white-space:pre-wrap;color:#777777;font-size:1.67vmin;font-family:Arial, Helvetica, sans-serif;">Loading virtual tour. Please wait...</SPAN></DIV></div></div></div>
     <div id="viewer" class="fill-viewport"></div>
 </body>
