@@ -27,63 +27,15 @@
         #viewer { z-index:1; }
         #preloadContainer { z-index:2; opacity:0; background-color:rgba(255,255,255,1); transition: opacity 0.5s; -webkit-transition: opacity 0.5s; -moz-transition: opacity 0.5s; -o-transition: opacity 0.5s;}
         #srt-back {
-            position:fixed; left:12px; top:12px; z-index:50;
-            background:#c6b13a; color:#14150b; font:700 14px/1 system-ui,sans-serif;
-            padding:10px 14px; text-decoration:none; border-radius:6px;
-        }
-        #srt-enter-vr-gate {
-            display:none; position:fixed; inset:0; z-index:40;
-            background:rgba(7,8,6,0.72); align-items:center; justify-content:center;
-            flex-direction:column; gap:14px;
-        }
-        #srt-enter-vr-gate button {
-            background:#c6b13a; color:#14150b; border:0; border-radius:10px;
-            font:700 22px/1.1 system-ui,sans-serif; padding:18px 28px; cursor:pointer;
-        }
-        #srt-enter-vr-gate p {
-            color:#e8e4d4; font:15px/1.4 system-ui,sans-serif; max-width:420px;
-            text-align:center; margin:0;
+            position:fixed; right:12px; top:12px; z-index:5;
+            background:#c6b13a; color:#14150b; font:700 13px/1 system-ui,sans-serif;
+            padding:8px 12px; text-decoration:none; border-radius:6px;
         }
     </style>
 </head>
 <body>
     <a id="srt-back" href="../../room.html">BACK TO ROOM</a>
-    <div id="srt-enter-vr-gate">
-        <button type="button" id="srt-enter-vr">ENTER TOUR IN VR</button>
-        <p>Tap this, then the goggles icon on the tour if the view stays flat.</p>
-    </div>
     <div id="preloadContainer" class="fill-viewport"><div style="z-index: 4; position: absolute; overflow: hidden; left: 0%; top: 50%; width: 100.00%; height: 10.00%" ><div style="text-align:left; color:#000; "><DIV STYLE="text-align:center;font-size:1.6666666666666663vmin;"><SPAN STYLE="display:inline-block; letter-spacing:0vmin; white-space:pre-wrap;color:#777777;font-size:1.67vmin;font-family:Arial, Helvetica, sans-serif;">Loading virtual tour. Please wait...</SPAN></DIV></div></div></div>
     <div id="viewer" class="fill-viewport"></div>
-    <script>
-        function hideEnterVrGate() {
-            var gate = document.getElementById('srt-enter-vr-gate');
-            if (gate) gate.style.display = 'none';
-        }
-        function tryClickVR() {
-            var nodes = document.querySelectorAll('div,button,span,a,img');
-            for (var i = 0; i < nodes.length; i++) {
-                var el = nodes[i];
-                var label = ((el.getAttribute('aria-label') || '') + ' ' + (el.title || '') + ' ' + (el.className || '') + ' ' + (el.id || '') + ' ' + (el.textContent || '')).toLowerCase();
-                if (label.indexOf('webvr') !== -1 || label.indexOf('webxr') !== -1 || /(^|[^a-z])vr([^a-z]|$)/.test(label)) {
-                    try { el.click(); return true; } catch (e) {}
-                }
-            }
-            return false;
-        }
-        function onEnterVrClicked() {
-            hideEnterVrGate();
-            tryClickVR();
-            setTimeout(tryClickVR, 400);
-            setTimeout(tryClickVR, 1200);
-        }
-        document.addEventListener('DOMContentLoaded', function () {
-            var btn = document.getElementById('srt-enter-vr');
-            if (btn) btn.addEventListener('click', onEnterVrClicked);
-            if (navigator.xr) {
-                var gate = document.getElementById('srt-enter-vr-gate');
-                if (gate) gate.style.display = 'flex';
-            }
-        });
-    </script>
 </body>
 </html>
