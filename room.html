@@ -386,15 +386,6 @@
             </a-plane>
         </a-entity>
 
-        <!-- VR-only 3DVista tour shell -->
-        <a-entity id="bridge-mode" visible="false">
-            <a-sphere id="bridge-sphere" radius="24"
-                      material="color: #050505; side: back; shader: flat"></a-sphere>
-            <a-plane id="exit-bridge" position="0 2.2 -6" width="5" height="1.6"
-                     material="color: #ff2222; emissive: #ff0000; shader: flat" class="clickable">
-                <a-text value="EXIT 360 TOUR" position="0 0 0.1" align="center" width="5" color="#ffffff"></a-text>
-            </a-plane>
-        </a-entity>
 
         <!-- Model viewer -->
         <a-entity id="model-viewer" visible="false" scale="0.5 0.5 0.5">
@@ -567,8 +558,7 @@
             const frame = document.getElementById('vr-browser-iframe');
             if (overlay) overlay.style.display = 'none';
             if (frame) frame.src = 'about:blank';
-            const bridgeMode = document.getElementById('bridge-mode');
-            if (bridgeMode) bridgeMode.setAttribute('visible', false);
+                if (bridgeMode) bridgeMode.setAttribute('visible', false);
             if (roomGroup) roomGroup.setAttribute('visible', true);
             loadEnvironment();
             if (rig) rig.setAttribute('position', '-9.224 2.9 7.768');
@@ -678,7 +668,6 @@
         const videoViewer = document.getElementById('video-viewer');
         const videoMode = document.getElementById('video-mode');
         const video360 = document.getElementById('video360');
-        const bridgeMode = document.getElementById('bridge-mode');
         const skyDome = document.getElementById('sky-dome');
         const ruinedBuilding = document.getElementById('ruined-building');
         const videoBall = document.getElementById('video-ball');
@@ -874,20 +863,21 @@
 
         function enterBridgeTour() {
             closeAllViewers();
-            pauseAmbient();
-            if (roomGroup) roomGroup.setAttribute('visible', false);
-            if (envGroup) envGroup.setAttribute('visible', false);
-            if (videoMode) videoMode.setAttribute('visible', false);
-            if (bridgeMode) bridgeMode.setAttribute('visible', true);
-            if (rig) rig.setAttribute('position', '0 0 0');
-            openImmersiveBrowser(PATHS.bridge);
             playClick(clickSound);
-        }
-
-        function exitBridgeTour() {
-            closeImmersiveBrowser();
-            resumeAmbient();
-            playClick(clickSound);
+            const tourUrl = PATHS.bridge;
+            let gone = false;
+            function go() {
+                if (gone) return;
+                gone = true;
+                window.location.href = tourUrl;
+            }
+            if (sceneEl && sceneEl.is && sceneEl.is('vr-mode') && sceneEl.exitVR) {
+                sceneEl.addEventListener('exit-vr', go, { once: true });
+                try { sceneEl.exitVR(); } catch (_) { go(); }
+                setTimeout(go, 700);
+            } else {
+                go();
+            }
         }
 
         function exit360() {
@@ -1087,18 +1077,12 @@
             if (ball) ball.addEventListener('click', enter360);
             const exitBtn = document.getElementById('exit-button');
             if (exitBtn) exitBtn.addEventListener('click', exit360);
-            const exitBridge = document.getElementById('exit-bridge');
-            if (exitBridge) exitBridge.addEventListener('click', exitBridgeTour);
             const closeVrBrowser = document.getElementById('close-vr-browser');
-            if (closeVrBrowser) closeVrBrowser.addEventListener('click', function () {
-                exitBridgeTour();
-                closeAllViewers();
-            });
+            if (closeVrBrowser) closeVrBrowser.addEventListener('click', closeAllViewers);
 
             document.addEventListener('keydown', function (e) {
                 if (e.key !== 'Escape') return;
                 if (isEntityVisible(videoMode)) { exit360(); return; }
-                if (isEntityVisible(bridgeMode)) { exitBridgeTour(); return; }
                 closeAllViewers();
             });
         });
