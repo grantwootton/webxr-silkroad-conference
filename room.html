@@ -191,10 +191,11 @@
             pointer-events: none;
         }
         #instructions {
-            position: absolute; bottom: 20px; left: 20px; color: #fff;
-            background: rgba(0,0,0,0.75); padding: 12px 14px; border-radius: 8px;
-            max-width: 520px; font-size: 14px; line-height: 1.45; z-index: 100;
+            position: absolute; bottom: 10px; left: 12px; color: #e8e4d4;
+            background: rgba(0,0,0,0.72); padding: 7px 10px; border-radius: 6px;
+            max-width: min(58vw, 280px); font-size: 11px; line-height: 1.35; z-index: 100;
         }
+        #instructions strong { font-size: 11px; letter-spacing: 0.04em; }
         #instructions a { color: #c6b13a; }
         body.in-vr #status,
         body.in-vr #instructions,
@@ -220,7 +221,7 @@
             border: none; border-radius: 8px; font-size: 20px; cursor: pointer; z-index: 210;
         }
         #vr-browser-overlay {
-            position: absolute; inset: 0; background: transparent;
+            position: absolute; inset: 0; background: #000;
             display: none; z-index: 220; flex-direction: column;
         }
         #vr-browser-overlay iframe {
@@ -244,16 +245,19 @@
             position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
             border-radius: 999px; background: #c6b13a; opacity: 0.85; pointer-events: none;
         }
-        @media (pointer: coarse) { #stick-wrap { display: block; } #instructions { left: 140px; } }
+        @media (pointer: coarse) {
+            #stick-wrap { display: block; }
+            #instructions { left: 128px; max-width: calc(100vw - 148px); }
+        }
     </style>
 </head>
 <body>
     <div id="status">Silk Road Training — loading…</div>
     <div id="instructions">
         <strong>CONTROLS</strong><br>
-        Desktop: WASD or arrows to move, click to look. Phone: drag to look, use the on-screen stick.<br>
-        VR: Quest browser VR button, thumbsticks to walk, right laser + trigger to select.<br>
-        AR: hides the ruined building and sky so kit sits in your room.<br>
+        Desktop: WASD or arrows, click to look.<br>
+        Phone: drag to look, use the stick.<br>
+        VR: Quest VR button, sticks to walk, trigger to select.<br>
         <a href="index.html">Leave room</a>
     </div>
     <div id="stick-wrap"><div id="stick"></div></div>
@@ -269,17 +273,17 @@
         <button id="close-video" type="button">✕ CLOSE VIDEO</button>
         <video id="overlay-video" controls playsinline></video>
     </div>
+    <video id="kit-video" playsinline webkit-playsinline crossorigin="anonymous" preload="auto" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
+    <video id="sphere-video" playsinline webkit-playsinline crossorigin="anonymous" preload="auto" loop style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
     <div id="vr-browser-overlay">
         <button id="close-vr-browser" type="button">✕ EXIT BROWSER</button>
         <iframe id="vr-browser-iframe" title="Immersive training content" allowfullscreen allow="autoplay; xr-spatial-tracking"></iframe>
     </div>
-    <video id="kit-video" playsinline webkit-playsinline crossorigin="anonymous" preload="auto" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
-    <video id="sphere-video" playsinline webkit-playsinline crossorigin="anonymous" preload="auto" loop style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
 
     <a-scene
-        xr="ar: true; vr: true"
-        webxr="optionalFeatures: local-floor, bounded-floor, hit-test, dom-overlay; overlayElement: #vr-browser-overlay"
-        xr-mode-ui="XRMode: xr"
+        xr="vr: true"
+        webxr="optionalFeatures: local-floor, bounded-floor, dom-overlay; overlayElement: #vr-browser-overlay"
+        xr-mode-ui="XRMode: vr"
         background="color: #1a140e"
         cursor="rayOrigin: mouse; fuse: false"
         raycaster="objects: .clickable; far: 50"
@@ -517,58 +521,31 @@
             if (el.id === 'video360') return document.getElementById('sphere-video');
             return getMediaElement(el);
         }
-        function refreshVideoTexture(el) {
-            try {
-                const mat = el && el.components && el.components.material && el.components.material.material;
-                if (mat && mat.map) mat.map.needsUpdate = true;
-            } catch (_) {}
-        }
         function stopHtmlVideo(video) {
             if (!video) return;
-            try {
-                video.pause();
-                if (video.readyState > 0) video.currentTime = 0;
-            } catch (_) {}
+            try { video.pause(); if (video.readyState > 0) video.currentTime = 0; } catch (_) {}
         }
         function playHtmlVideo(video, src, meshEl) {
             if (!video || !src) return;
             function start() {
                 try {
                     if (video.readyState > 0) video.currentTime = 0;
-                    refreshVideoTexture(meshEl);
                     const playPromise = video.play();
                     if (playPromise && playPromise.catch) {
-                        playPromise.catch(function () {
-                            video.muted = true;
-                            video.play().catch(function () {});
-                        });
+                        playPromise.catch(function () { video.muted = true; video.play().catch(function () {}); });
                     }
                 } catch (_) {}
             }
-            video.onended = function () {
-                try {
-                    video.pause();
-                    if (video.readyState > 0) video.currentTime = 0;
-                    refreshVideoTexture(meshEl);
-                } catch (_) {}
-            };
+            video.onended = function () { stopHtmlVideo(video); };
             const sameFile = (video.getAttribute('src') || video.src || '').indexOf(src) !== -1 && video.readyState >= 2;
-            if (sameFile) {
-                start();
-                return;
-            }
+            if (sameFile) { start(); return; }
             video.pause();
             video.src = src;
             video.load();
             video.addEventListener('canplay', start, { once: true });
-            video.addEventListener('loadeddata', function () { refreshVideoTexture(meshEl); }, { once: true });
         }
-        function rewindMedia(el) {
-            stopHtmlVideo(htmlVideoFor(el));
-        }
-        function playMediaFromStart(el, src) {
-            playHtmlVideo(htmlVideoFor(el), src, el);
-        }
+        function rewindMedia(el) { stopHtmlVideo(htmlVideoFor(el)); }
+        function playMediaFromStart(el, src) { playHtmlVideo(htmlVideoFor(el), src, el); }
         function placePanelAtEntity(panel, sourceEl, distance) {
             const THREE = getTHREE();
             if (!panel || !sourceEl || !sourceEl.object3D || !THREE) {
@@ -585,40 +562,16 @@
             panel.setAttribute('position', pos.x.toFixed(3) + ' ' + pos.y.toFixed(3) + ' ' + pos.z.toFixed(3));
             panel.object3D.quaternion.copy(quat);
         }
-        function hideVrBrowserOverlay() {
+        function closeImmersiveBrowser() {
             const overlay = document.getElementById('vr-browser-overlay');
             const frame = document.getElementById('vr-browser-iframe');
             if (overlay) overlay.style.display = 'none';
-            if (frame) {
-                try { frame.removeAttribute('src'); } catch (_) {}
-                frame.src = 'about:blank';
-            }
-        }
-        function rebuildSkyDome() {
-            const group = document.getElementById('environment-group');
-            if (!group) return;
-            const old = document.getElementById('sky-dome');
-            if (old && old.parentNode) old.parentNode.removeChild(old);
-            const sky = document.createElement('a-sky');
-            sky.id = 'sky-dome';
-            sky.setAttribute('radius', '80');
-            sky.setAttribute('src', ENV.sky);
-            group.insertBefore(sky, group.firstChild);
-        }
-        function closeImmersiveBrowser() {
-            hideVrBrowserOverlay();
-            const mode = document.getElementById('bridge-mode');
-            if (mode) mode.setAttribute('visible', false);
+            if (frame) frame.src = 'about:blank';
+            const bridgeMode = document.getElementById('bridge-mode');
+            if (bridgeMode) bridgeMode.setAttribute('visible', false);
             if (roomGroup) roomGroup.setAttribute('visible', true);
+            loadEnvironment();
             if (rig) rig.setAttribute('position', '-9.224 2.9 7.768');
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                    if (!isPhoneClient() && !(sceneEl.is && sceneEl.is('ar-mode'))) {
-                        rebuildSkyDome();
-                        loadEnvironment();
-                    }
-                });
-            });
         }
         function openImmersiveBrowser(url) {
             const overlay = document.getElementById('vr-browser-overlay');
@@ -738,18 +691,6 @@
 
         const ORB_MATERIAL = 'color: #f3f8fc; metalness: 0.55; roughness: 0.03; emissive: #9eb0bc; emissiveIntensity: 0.08; transparent: true; opacity: 0.42';
 
-        function isPhoneClient() {
-            const q = new URLSearchParams(location.search);
-            if (q.get('ar') === '1') return true;
-            if (q.get('env') === '1') return false;
-            const ua = navigator.userAgent || '';
-            if (/Oculus|Quest|Pacific|Headset/i.test(ua)) return false;
-            if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
-            // iPadOS, and iPhone "Request Desktop Website", report as a Mac.
-            const touchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-            return touchMac;
-        }
-
         function clearBuildingWalls() {
             const walls = rig && rig.components && rig.components['mesh-walls'];
             if (!walls) return;
@@ -758,15 +699,10 @@
         }
 
         function loadEnvironment() {
-            if (isPhoneClient()) return;
-            const sky = document.getElementById('sky-dome');
-            if (sky) sky.setAttribute('src', ENV.sky);
-            const building = document.getElementById('ruined-building');
-            if (building && !building.getAttribute('src')) building.setAttribute('src', ENV.building);
-            const orb = document.getElementById('video-ball');
-            if (orb) orb.setAttribute('material', 'sphericalEnvMap', ENV.sky);
-            const group = document.getElementById('environment-group');
-            if (group) group.setAttribute('visible', true);
+            if (skyDome) skyDome.setAttribute('src', ENV.sky);
+            if (ruinedBuilding && !ruinedBuilding.getAttribute('src')) ruinedBuilding.setAttribute('src', ENV.building);
+            if (videoBall) videoBall.setAttribute('material', 'sphericalEnvMap', ENV.sky);
+            if (envGroup) envGroup.setAttribute('visible', true);
             environmentLoaded = true;
         }
 
@@ -800,7 +736,7 @@
             const overlay = document.getElementById('video-overlay');
             const ov = document.getElementById('overlay-video');
             if (overlay) overlay.style.display = 'none';
-            if (ov) stopHtmlVideo(ov);
+            if (ov) { try { ov.pause(); ov.removeAttribute('src'); ov.load(); } catch (_) {} }
         }
         function closeAllViewers() {
             hideModelViewer();
@@ -939,23 +875,13 @@
         function enterBridgeTour() {
             closeAllViewers();
             pauseAmbient();
+            if (roomGroup) roomGroup.setAttribute('visible', false);
+            if (envGroup) envGroup.setAttribute('visible', false);
+            if (videoMode) videoMode.setAttribute('visible', false);
+            if (bridgeMode) bridgeMode.setAttribute('visible', true);
+            if (rig) rig.setAttribute('position', '0 0 0');
+            openImmersiveBrowser(PATHS.bridge);
             playClick(clickSound);
-            // 3DVista must own the WebXR session. An iframe inside this room
-            // can only show a flat page. Leave A-Frame VR, then open the tour.
-            const tourUrl = PATHS.bridge + (PATHS.bridge.indexOf('#') === -1 ? '#ovrweb' : '');
-            let gone = false;
-            function go() {
-                if (gone) return;
-                gone = true;
-                window.location.href = tourUrl;
-            }
-            if (sceneEl && sceneEl.is && sceneEl.is('vr-mode') && sceneEl.exitVR) {
-                sceneEl.addEventListener('exit-vr', go, { once: true });
-                try { sceneEl.exitVR(); } catch (_) { go(); }
-                setTimeout(go, 900);
-            } else {
-                go();
-            }
         }
 
         function exitBridgeTour() {
@@ -1031,12 +957,7 @@
             if (statusEl) statusEl.textContent = 'Silk Road Training — WebXR Demonstration';
             bindStick();
 
-            if (isPhoneClient()) {
-                unloadEnvironment();
-                if (statusEl) statusEl.textContent = 'Phone / AR — sky and building not loaded';
-            } else {
-                loadEnvironment();
-            }
+            loadEnvironment();
 
             const lazyEls = Array.prototype.slice.call(document.querySelectorAll('[lazy-gltf]'));
             lazyEls.sort(function (a, b) {
@@ -1064,18 +985,9 @@
 
             sceneEl.addEventListener('enter-vr', function () {
                 document.body.classList.add('in-vr');
-                if (!isPhoneClient() && !(sceneEl.is && sceneEl.is('ar-mode'))) loadEnvironment();
+                loadEnvironment();
             });
             sceneEl.addEventListener('exit-vr', function () { document.body.classList.remove('in-vr'); });
-            sceneEl.addEventListener('enter-ar', function () {
-                document.body.classList.add('in-vr');
-                unloadEnvironment();
-                showToast('AR: sky and building not loaded — kit stays in your room');
-            });
-            sceneEl.addEventListener('exit-ar', function () {
-                document.body.classList.remove('in-vr');
-                if (!isPhoneClient() && envGroup && !isEntityVisible(videoMode)) loadEnvironment();
-            });
 
             Object.keys(modelData).forEach(function (id) {
                 const el = document.getElementById(id);
@@ -1182,20 +1094,6 @@
                 exitBridgeTour();
                 closeAllViewers();
             });
-            const vrFrame = document.getElementById('vr-browser-iframe');
-            if (vrFrame) {
-                vrFrame.addEventListener('load', function () {
-                    try {
-                        const href = vrFrame.contentWindow && vrFrame.contentWindow.location && vrFrame.contentWindow.location.href;
-                        if (href && href.indexOf('about:blank') !== -1) {
-                            const overlay = document.getElementById('vr-browser-overlay');
-                            if (overlay && overlay.style.display !== 'none' && overlay.style.display !== '') {
-                                /* ignore our own blanking after close */
-                            }
-                        }
-                    } catch (_) {}
-                });
-            }
 
             document.addEventListener('keydown', function (e) {
                 if (e.key !== 'Escape') return;
